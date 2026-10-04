@@ -1,0 +1,372 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// 《一个方格：洛书里的 15》—— 全部画面由代码绘制。render(t) 画出第 t 秒的画面。
+const W = 1080, H = 1920;
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const INK = '#1b1712', RED = '#b8322a', MUTE = '#7a6e60', PAPER = '#efe8da';
+const SERIF = '"Noto Serif SC"', EN = '"EB Garamond"';
+
+// ---------- 工具 ----------
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const ease = k => { k = clamp(k); return k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
+const prog = (t, a, b) => ease((t - a) / (b - a));
+// 在 [a,b] 区间内显示，前后各 f 秒淡入淡出
+const win = (t, a, b, f = .45) => clamp(Math.min((t - a) / f, (b - t) / f));
+function rng(seed) { let s = seed >>> 0 || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+function hash(str) { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; }
+
+// ---------- 宣纸 ----------
+const paper = document.createElement('canvas'); paper.width = W; paper.height = H;
+(function makePaper() {
+  const p = paper.getContext('2d'), r = rng(7);
+  p.fillStyle = PAPER; p.fillRect(0, 0, W, H);
+  for (const [gw, a] of [[12, .10], [36, .07], [110, .05]]) {   // 多尺度云纹
+    const n = document.createElement('canvas'); n.width = gw; n.height = Math.round(gw * H / W);
+    const nc = n.getContext('2d'), img = nc.createImageData(n.width, n.height);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = 120 + r() * 100; img.data[i] = v; img.data[i + 1] = v * .96; img.data[i + 2] = v * .88; img.data[i + 3] = 255;
+    }
+    nc.putImageData(img, 0, 0);
+    p.globalAlpha = a; p.globalCompositeOperation = 'multiply'; p.imageSmoothingEnabled = true;
+    p.drawImage(n, 0, 0, W, H);
+  }
+  p.globalCompositeOperation = 'source-over';
+  p.strokeStyle = '#8a7a62';                                     // 纸纤维
+  for (let i = 0; i < 900; i++) {
+    const x = r() * W, y = r() * H, l = 10 + r() * 40, a = r() * Math.PI;
+    p.globalAlpha = .025 + r() * .04; p.lineWidth = .6 + r();
+    p.beginPath(); p.moveTo(x, y);
+    p.quadraticCurveTo(x + Math.cos(a) * l * .5 + r() * 6, y + Math.sin(a) * l * .5 + r() * 6, x + Math.cos(a) * l, y + Math.sin(a) * l);
+    p.stroke();
+  }
+  p.globalAlpha = 1;
+  const glow = p.createRadialGradient(W * .5, H * .38, 80, W * .5, H * .45, H * .75);  // 中心提亮、四角压暗
+  glow.addColorStop(0, 'rgba(255,250,238,.35)'); glow.addColorStop(.6, 'rgba(255,250,238,0)'); glow.addColorStop(1, 'rgba(70,52,30,.22)');
+  p.fillStyle = glow; p.fillRect(0, 0, W, H);
+})();
+
+// ---------- 笔墨 ----------
+// 一笔毛笔线：k 为书写进度 0..1，同一 id 的笔触每帧形状一致
+function brush(id, x1, y1, x2, y2, k, w = 7, color = INK, alpha = 1) {
+  if (k <= 0 || alpha <= 0) return;
+  const r = rng(hash(id)), segs = 40, dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy);
+  const nx = -dy / len, ny = dx / len, n = Math.max(1, Math.floor(segs * clamp(k)));
+  const wob = [], wid = [];
+  let ph1 = r() * 6, ph2 = r() * 6;
+  for (let i = 0; i <= segs; i++) {
+    const u = i / segs;
+    wob.push(Math.sin(u * 5 + ph1) * 1.2 + Math.sin(u * 13 + ph2) * .5);
+    const press = Math.min(1, u * 10) * (1 - Math.pow(u, 6) * .55);      // 起笔顿、收笔轻
+    wid.push(w * (.75 + .25 * press) * (.92 + Math.sin(u * 9 + ph2) * .08));
+  }
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let i = 0; i <= n; i++) { const u = i / segs, o = wob[i] + wid[i] / 2; ctx.lineTo(x1 + dx * u + nx * o, y1 + dy * u + ny * o); }
+  for (let i = n; i >= 0; i--) { const u = i / segs, o = wob[i] - wid[i] / 2; ctx.lineTo(x1 + dx * u + nx * o, y1 + dy * u + ny * o); }
+  ctx.fill();
+  ctx.strokeStyle = color; ctx.lineCap = 'round';                        // 飞白丝
+  for (let b = 0; b < 5; b++) {
+    const off = (r() - .5) * w * 1.3, a0 = .55 + r() * .4;
+    ctx.globalAlpha = alpha * (.12 + r() * .12); ctx.lineWidth = .8 + r() * 1.2;
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) { const u = i / segs; if (u > a0 + r() * .4) break; ctx.lineTo(x1 + dx * u + nx * (wob[i] + off), y1 + dy * u + ny * (wob[i] + off)); }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function text(str, x, y, { size = 40, weight = 400, color = INK, alpha = 1, align = 'center', font = SERIF, italic = false, spacing = 0 } = {}) {
+  if (alpha <= 0) return;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle';
+  ctx.font = `${italic ? 'italic ' : ''}${weight} ${size}px ${font}`;
+  if (spacing) ctx.letterSpacing = spacing + 'px';
+  ctx.fillText(str, x, y); ctx.restore();
+}
+// 一行里混排几段不同颜色的字：parts = [[文字, 颜色], ...]
+function richText(parts, x, y, opt = {}) {
+  ctx.save(); ctx.font = `${opt.weight || 400} ${opt.size || 40}px ${SERIF}`;
+  if (opt.spacing) ctx.letterSpacing = opt.spacing + 'px';
+  const total = parts.reduce((s, [p]) => s + ctx.measureText(p).width, 0);
+  let cx = x - total / 2;
+  for (const [p, c] of parts) { const w = ctx.measureText(p).width; text(p, cx, y, { ...opt, color: c, align: 'left' }); cx += w; }
+  ctx.restore();
+}
+// 字幕：zh 用 | 分行，英文在下
+function caption(t, a, b, zh, en) {
+  const k = win(t, a, b), rise = (1 - clamp((t - a) / .6)) * 10, lines = zh.split('|');
+  lines.forEach((l, i) => text(l, W / 2, 1180 + i * 64 + rise, { size: 46, weight: 700, alpha: k, spacing: 2 }));
+  text(en, W / 2, 1180 + lines.length * 64 - 4 + rise, { size: 30, font: EN, italic: true, color: MUTE, alpha: k * .9 });
+}
+function seal(x, y, size, alpha) {
+  if (alpha <= 0) return;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = RED;
+  ctx.beginPath(); ctx.roundRect(x - size / 2, y - size / 2, size, size, size * .1); ctx.fill(); ctx.restore();
+  text('洛', x, y - size * .21, { size: size * .38, weight: 900, color: PAPER, alpha });
+  text('书', x, y + size * .21, { size: size * .38, weight: 900, color: PAPER, alpha });
+}
+
+// ---------- 洛书 ----------
+const M = [[4, 9, 2], [3, 5, 7], [8, 1, 6]];
+const G = { cx: 540, cy: 700, s: 180 };
+const TOP = 330;                                                    // 画面上方的「数字位」
+const cell = (r, c, g = G) => [g.cx + (c - 1) * g.s, g.cy + (r - 1) * g.s];
+const LINES = [                                                     // 八条线：三横、三竖、两斜
+  [[0, 0], [0, 2]], [[1, 0], [1, 2]], [[2, 0], [2, 2]],
+  [[0, 0], [2, 0]], [[0, 1], [2, 1]], [[0, 2], [2, 2]],
+  [[0, 0], [2, 2]], [[0, 2], [2, 0]],
+];
+const lineCells = i => { const [[r1, c1], [r2, c2]] = LINES[i]; const dr = Math.sign(r2 - r1), dc = Math.sign(c2 - c1); return [0, 1, 2].map(j => [r1 + dr * j, c1 + dc * j]); };
+const posOf = n => { for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) if (M[r][c] === n) return [r, c]; };
+
+function gridLines(g, k, alpha, id) {
+  const h = g.s * 1.5;
+  for (let i = 0; i < 4; i++) {
+    const o = -h + i * g.s, kk = clamp(k * 1.6 - i * .15);
+    brush(id + 'h' + i, g.cx - h - 6, g.cy + o, g.cx + h + 6, g.cy + o, kk, 4.5, INK, alpha * .85);
+    brush(id + 'v' + i, g.cx + o, g.cy - h - 6, g.cx + o, g.cy + h + 6, kk, 4.5, INK, alpha * .85);
+  }
+}
+function numbers(g, k, alpha, M2 = M, size = 88, red = 0) {
+  if (alpha * k <= 0) return;
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+    const [x, y] = cell(r, c, g), center = r === 1 && c === 1;
+    ctx.save(); ctx.translate(x, y + size * .04); const sc = .7 + .3 * k; ctx.scale(sc, sc);
+    text(String(M2[r][c]), 0, 0, { size, weight: 700, alpha: alpha * k, color: center && red > 0 ? RED : INK });
+    ctx.restore();
+  }
+}
+function lineEnds(i, ext = .5) {
+  const cs = lineCells(i), [x1, y1] = cell(...cs[0]), [x2, y2] = cell(...cs[2]);
+  const dx = (x2 - x1) / 2, dy = (y2 - y1) / 2;
+  return [x1 - dx * ext, y1 - dy * ext, x2 + dx * ext, y2 + dy * ext];
+}
+function sumLabel(i, alpha) {
+  if (alpha <= 0) return;
+  const h = G.s * 1.5;
+  const [x, y] = i < 3 ? [G.cx - h - 62, G.cy + (i - 1) * G.s]
+    : i < 6 ? [G.cx + (i - 4) * G.s, G.cy + h + 62]
+    : i === 6 ? [G.cx + h + 70, G.cy + h + 70] : [G.cx - h - 70, G.cy + h + 70];
+  ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = RED; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  text('15', x, y + 2, { size: 30, weight: 700, color: RED, alpha });
+}
+function redLine(id, i, k, alpha) { const [x1, y1, x2, y2] = lineEnds(i); brush(id + i, x1, y1, x2, y2, k, 9, RED, alpha * .85); }
+
+// 点阵：奇数为白圈（阳），偶数为黑点（阴）
+function dotLayout(n, r, c) {
+  const pts = [];
+  if (n === 5) return [[0, 0], [0, -32], [32, 0], [0, 32], [-32, 0]];
+  if (r === 1 && c !== 1 || (r !== 1 && c === 1)) {                    // 上下左右：一字排开
+    const horiz = c === 1, gap = n > 5 ? 19 : 28;
+    for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2) * gap; pts.push(horiz ? [o, 0] : [0, o]); }
+    return pts;
+  }
+  const cols = n / 2;                                                 // 四角：两排
+  for (let i = 0; i < n; i++) { const row = Math.floor(i / cols), col = i % cols; pts.push([(col - (cols - 1) / 2) * 28, (row - .5) * 28]); }
+  return pts;
+}
+function drawDots(t, t0, merge) {
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+    const n = M[r][c], appear = prog(t, t0 + (n - 1) * .38, t0 + .6 + (n - 1) * .38);
+    if (appear <= 0) continue;
+    const [x, y] = cell(r, c), pts = dotLayout(n, r, c).map(([dx, dy]) => [x + dx * (1 - merge), y + dy * (1 - merge)]);
+    const a = appear * (1 - merge), odd = n % 2;
+    if (a <= 0) continue;
+    ctx.save(); ctx.globalAlpha = a * .7; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.beginPath(); pts.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); if (n === 5) ctx.closePath(); ctx.stroke();
+    ctx.globalAlpha = a;
+    for (const [px, py] of pts) {
+      ctx.beginPath(); ctx.arc(px, py, 8 * (.6 + .4 * appear), 0, Math.PI * 2);
+      if (odd) { ctx.fillStyle = PAPER; ctx.fill(); ctx.lineWidth = 3; ctx.stroke(); } else { ctx.fillStyle = INK; ctx.fill(); }
+    }
+    ctx.restore();
+  }
+}
+
+// 杨辉口诀：九子斜排，上下对易，左右相更，四维挺出
+const DIAMOND = { 1: [0, -2], 4: [-1, -1], 2: [1, -1], 7: [-2, 0], 5: [0, 0], 3: [2, 0], 8: [-1, 1], 6: [1, 1], 9: [0, 2] };
+const Y = { show: 35.0, swapA: 36.9, swapB: 38.3, pull: 39.7, done: 40.9 };
+function yangHui(t, alpha) {
+  if (alpha <= 0) return;
+  const kA = prog(t, Y.swapA, Y.swapA + 1), kB = prog(t, Y.swapB, Y.swapB + 1), kP = prog(t, Y.pull, Y.pull + 1.1);
+  const d = lerp(150, G.s, kP);
+  gridLines(G, prog(t, Y.pull + .5, Y.done + .3), alpha, 'yh');
+  for (let n = 1; n <= 9; n++) {
+    let [x, y] = DIAMOND[n];
+    if (n === 1 || n === 9) { const sgn = n === 1 ? 1 : -1; y = lerp(y, -y, kA); x += Math.sin(Math.PI * kA) * 1.1 * sgn; }
+    if (n === 3 || n === 7) { const sgn = n === 3 ? 1 : -1; x = lerp(x, -x, kB); y += Math.sin(Math.PI * kB) * 1.1 * sgn; }
+    if (kP > 0 && (Math.abs(x) === 2 || Math.abs(y) === 2)) { x = lerp(x, x / 2, kP); y = lerp(y, y / 2, kP); }  // 四个尖角往里收
+    const appear = prog(t, Y.show + (n - 1) * .13, Y.show + .5 + (n - 1) * .13);
+    const moving = (n === 1 || n === 9) ? Math.sin(Math.PI * kA) : (n === 3 || n === 7) ? Math.sin(Math.PI * kB) : 0;
+    text(String(n), G.cx + x * d, G.cy + y * d + 4, { size: 88, weight: 700, alpha: alpha * appear, color: moving > .05 || (n === 5 && t > Y.done) ? RED : INK });
+  }
+  const rule = ['九子斜排', '上下对易', '左右相更', '四维挺出'], starts = [Y.show, Y.swapA, Y.swapB, Y.pull];
+  rule.forEach((p, i) => {
+    const on = prog(t, starts[i], starts[i] + .4), act = i === 3 ? win(t, starts[i], Y.done + .4) : win(t, starts[i], starts[i + 1]);
+    text(p, 540 + (i - 1.5) * 220, 1068, { size: 38, weight: 700, alpha: alpha * on, color: act > .5 ? RED : INK, spacing: 4 });
+  });
+}
+
+// 八种样子
+const rot = m => m[0].map((_, c) => m.map(row => row[c]).reverse());
+const flip = m => m.map(row => [...row].reverse());
+const VARIANTS = (() => { const v = []; let m = M; for (let i = 0; i < 4; i++) { v.push(m, flip(m)); m = rot(m); } return v; })();
+function miniGrid(m, x, y, s, alpha, id) {
+  const h = s * 1.5;
+  for (let i = 0; i < 4; i++) {
+    const o = -h + i * s;
+    brush(id + 'h' + i, x - h, y + o, x + h, y + o, 1, 2.6, INK, alpha * .8);
+    brush(id + 'v' + i, x + o, y - h, x + o, y + h, 1, 2.6, INK, alpha * .8);
+  }
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++)
+    text(String(m[r][c]), x + (c - 1) * s, y + (r - 1) * s + 2, { size: s * .55, weight: 700, alpha, color: r === 1 && c === 1 ? RED : INK });
+}
+
+// ---------- 主时间线 ----------
+const DURATION = 59;
+const LINE_T = [14.8, 15.8, 16.8, 18.2, 19.2, 20.2, 21.6, 22.8];       // 每条线落笔的时刻
+function render(t) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(paper, 0, 0);
+
+  // 漂浮的微尘
+  const dr = rng(99);
+  for (let i = 0; i < 40; i++) {
+    const x0 = dr() * W, y0 = dr() * H, sp = 6 + dr() * 14, ph = dr() * 6;
+    const x = (x0 + Math.sin(t * .3 + ph) * 30) % W, y = ((y0 - t * sp) % H + H) % H;
+    ctx.globalAlpha = .08 + .08 * Math.sin(t + ph); ctx.fillStyle = '#6b5a43';
+    ctx.beginPath(); ctx.arc(x, y, 1 + dr() * 1.6, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // 页眉
+  ctx.fillStyle = RED; ctx.fillRect(84, 112, 12, 12);
+  text('一 个 方 格', 110, 119, { size: 28, weight: 700, align: 'left' });
+  text('洛书里的 15', 272, 120, { size: 22, color: MUTE, align: 'left' });
+  text('本视频由 AI 用代码生成', 996, 120, { size: 22, color: MUTE, align: 'right' });
+
+  // ① 0–4.6s 开门见山：一个方格，八条线全是 15
+  const hookA = 1 - prog(t, 4.0, 4.6);
+  if (hookA > 0) {
+    gridLines(G, prog(t, 0, .9), hookA, 'hk');
+    for (let i = 0; i < 8; i++) {
+      const ti = 1.2 + i * .28;
+      redLine('H', i, prog(t, ti, ti + .25), hookA * .9);
+      sumLabel(i, clamp((t - ti - .2) / .2) * hookA);
+    }
+    numbers(G, prog(t, .1, .9), hookA);
+    text('15', 540, TOP, { size: 96, weight: 700, color: RED, alpha: hookA * prog(t, 1.2, 2) });
+  }
+  caption(t, 0, 2.2, '一个方格，九个数。', 'One square. Nine numbers.');
+  caption(t, 2.2, 4.4, '横、竖、斜，八条线，条条都是十五。', 'Across, down, corner to corner: every line is fifteen.');
+
+  // ② 4.6–14.6s 神龟、点阵、变成数字
+  if (t > 4.6 && t < 12) drawDots(t, 4.9, prog(t, 9.4, 11));
+  caption(t, 4.8, 7.4, '传说大禹治水，洛水里浮出一只神龟。', 'Legend says a turtle rose from the Luo River.');
+  caption(t, 7.4, 10.2, '龟背上，是这样一幅点阵。', 'On its shell, a pattern of dots.');
+  caption(t, 10.4, 14.6, '数一数每一团点：一到九，各占一格。', 'Count the dots: one to nine, one per cell.');
+
+  // 主方格（10s 之后）的透明度：杨辉、八种样子两段让位
+  const mainA = t < 33.8 ? 1 : t < 41 ? 1 - prog(t, 33.8, 34.4) : t < 47 ? 0 : prog(t, 47.2, 48);
+  if (t > 9.6) gridLines(G, prog(t, 9.6, 11), mainA, 'g');
+
+  // ③ 14.8–26.6s 八条线，一条一条算
+  for (let i = 0; i < 8; i++) {
+    if (t < LINE_T[i] || t > 34) continue;
+    const current = i === 7 ? t < 24.4 : t < LINE_T[i + 1];
+    let a = current ? 1 : .32;
+    if (t >= 24.4) a = lerp(.32, .75, prog(t, 24.4, 24.9)) * (1 - prog(t, 26.6, 27.3));
+    if (t >= 30.9) {                                                 // 经过中心的四条线再亮起
+      const j = [1, 4, 6, 7].indexOf(i);
+      a = j < 0 ? 0 : prog(t, 31.2 + j * .25, 31.8 + j * .25) * .8 * (1 - prog(t, 33.8, 34.3));
+    }
+    redLine('L', i, t >= 30.9 ? 1 : prog(t, LINE_T[i], LINE_T[i] + .5), a);
+    if (t < 27.3) sumLabel(i, clamp((t - LINE_T[i] - .4) / .3) * (1 - prog(t, 26.6, 27.3)));
+  }
+  if (t > 10) numbers(G, prog(t, 10.2, 11.4), mainA, M, 88, prog(t, 31.2, 31.8));
+  for (let i = 0; i < 8; i++) {
+    const a = win(t, LINE_T[i] + .3, i === 7 ? 24.4 : LINE_T[i + 1], .25);
+    if (a <= 0) continue;
+    const v = lineCells(i).map(([r, c]) => M[r][c]);
+    richText([[`${v[0]} + ${v[1]} + ${v[2]} = `, INK], ['15', RED]], 540, TOP, { size: 56, weight: 700, alpha: a, spacing: 2 });
+  }
+  caption(t, 14.8, 18, '横着加，十五。', 'Across: fifteen.');
+  caption(t, 18.2, 21.4, '竖着加，还是十五。', 'Down: fifteen again.');
+  caption(t, 21.6, 24.4, '斜着加，依然十五。', 'Corner to corner: still fifteen.');
+  richText([['8 条线 · 条条 ', INK], ['15', RED]], 540, TOP, { size: 56, weight: 700, alpha: win(t, 24.5, 26.7), spacing: 2 });
+  caption(t, 24.5, 26.7, '八条线，条条都是十五。', 'Eight lines. Every one adds to fifteen.');
+
+  // ④ 26.8–30.9s 为什么是 15
+  const bandA = win(t, 28.8, 30.9);
+  for (let r = 0; r < 3; r++) {
+    const a = bandA * prog(t, 28.8 + r * .25, 29.3 + r * .25);
+    ctx.fillStyle = RED; ctx.globalAlpha = a * .09;
+    ctx.fillRect(G.cx - G.s * 1.5 + 6, G.cy + (r - 1.5) * G.s + 6, G.s * 3 - 12, G.s - 12); ctx.globalAlpha = 1;
+    text('15', G.cx + G.s * 1.5 + 50, G.cy + (r - 1) * G.s + 2, { size: 34, weight: 700, color: RED, alpha: a });
+  }
+  richText([['1 + 2 + … + 9 = ', INK], ['45', RED]], 540, TOP - 40, { size: 50, weight: 700, alpha: win(t, 27, 30.9) });
+  richText([['45 ÷ 3 = ', INK], ['15', RED]], 540, TOP + 40, { size: 50, weight: 700, alpha: win(t, 28.8, 30.9) });
+  caption(t, 27, 28.8, '一到九加起来，是四十五。', 'One through nine add up to forty-five.');
+  caption(t, 28.8, 30.9, '分成三行，每行只能是十五。', 'Split into three rows: fifteen each.');
+
+  // ⑤ 30.9–34.4s 中心只能是 5
+  const ck = win(t, 31.1, 34.2);
+  if (ck > 0) {
+    ctx.save(); ctx.globalAlpha = ck; ctx.strokeStyle = RED; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(G.cx, G.cy, 66 + 5 * Math.sin(t * 3), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  }
+  richText([['正中间，只能是 ', INK], ['5', RED]], 540, TOP, { size: 56, weight: 700, alpha: win(t, 31.4, 34.2), spacing: 2 });
+  caption(t, 31.1, 34.4, '四条线都穿过中心，那一格只能是五。', 'Four lines meet in the middle. It has to be five.');
+
+  // ⑥ 34.6–42s 杨辉的十六字口诀
+  const yA = t < 41.4 ? 1 : 1 - prog(t, 41.6, 42.2);
+  if (t > 34.6 && t < 42.4) yangHui(t, yA);
+  text('1275 · 南宋 杨辉《续古摘奇算法》', 540, TOP - 30, { size: 32, color: MUTE, alpha: win(t, 34.8, 42), spacing: 2 });
+  caption(t, 34.6, 37.6, '1275 年，南宋杨辉|把排法写成了十六个字。', 'In 1275, Yang Hui wrote the method in sixteen characters.');
+  caption(t, 37.8, 42, '照着做，一步一步，|就排出了洛书。', 'Follow them step by step, and the square appears.');
+
+  // ⑦ 42–47.2s 八种样子
+  for (let i = 0; i < 8; i++) {
+    const col = i % 2, row = Math.floor(i / 2);
+    const a = prog(t, 42.4 + i * .16, 43 + i * .16) * (1 - prog(t, 46.4, 47.2));
+    if (a > 0) miniGrid(VARIANTS[i], 540 + (col - .5) * 330, 400 + row * 200, 50, a, 'v' + i);
+  }
+  caption(t, 42.4, 44.8, '转一转，翻一翻，一共八种样子。', 'Turn it, flip it: eight ways to look at it.');
+  caption(t, 44.8, 47.2, '其实，一到九只有这一种排法。', 'Yet there is only one way to place one to nine.');
+
+  // ⑧ 47.4–55s 两千年前的书，和今天的九宫格
+  const qa = win(t, 47.6, 51.6);
+  text('西汉《大戴礼记》', 540, TOP - 46, { size: 30, color: MUTE, alpha: qa, spacing: 4 });
+  text('二九四，七五三，六一八', 540, TOP + 26, { size: 52, weight: 700, alpha: qa, spacing: 8 });
+  caption(t, 47.6, 51.6, '两千多年前，它就被写进了书里。', 'Over two thousand years ago, it was already in a book.');
+  text('九 宫', 540, TOP, { size: 72, weight: 900, alpha: win(t, 51.8, 55), spacing: 20 });
+  caption(t, 51.8, 55, '今天说的「九宫格」，|叫的还是它的老名字。', 'Today\'s "nine-grid" still carries its old name.');
+
+  // ⑨ 55–59s 收尾
+  const ea = prog(t, 55.1, 56);
+  text('一个方格', 510, TOP - 20, { size: 84, weight: 900, alpha: ea, spacing: 12 });
+  seal(760, TOP - 26, 64, prog(t, 55.8, 56.4));
+  text('4 9 2 · 3 5 7 · 8 1 6', 540, TOP + 62, { size: 30, color: RED, alpha: ea, spacing: 4 });
+  caption(t, 55.2, 59.5, '今天我们叫它幻方。|古人叫它，洛书。', 'We call it a magic square. They called it Luoshu.');
+}
+
+window.render = render;
+window.DURATION = DURATION;
+window.ready = (async () => {
+  const faces = [
+    ['Noto Serif SC', 'fonts/NotoSerifSC-400.ttf', { weight: '400' }],
+    ['Noto Serif SC', 'fonts/NotoSerifSC-700.ttf', { weight: '700' }],
+    ['Noto Serif SC', 'fonts/NotoSerifSC-900.ttf', { weight: '900' }],
+    ['EB Garamond', 'fonts/EBGaramond-Italic.ttf', { style: 'italic' }],
+  ];
+  for (const [name, url, desc] of faces) document.fonts.add(await new FontFace(name, `url(${url})`, desc).load());
+  render(0);
+  return true;
+})();
+</script>
+</body></html>
