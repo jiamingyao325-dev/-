@@ -1,0 +1,138 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="../vibe-kit/ink.js"></script>
+<script>
+// 《六十甲子：为什么六十年一轮》—— 全部画面由代码绘制。render(t) 画出第 t 秒的画面。
+const TOP = 300;
+const GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+const ZHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+const SHENG = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
+const C = { x: 540, y: 700 }, RO = 262, RI = 162;
+const pair = k => GAN[((k % 10) + 10) % 10] + ZHI[((k % 12) + 12) % 12];
+
+// 转盘走到第几步（第 0 步 = 甲子）
+function stepAt(t) {
+  if (t < 13) return 0;
+  if (t < 21) { let s = 0; for (let k = 1; k <= 12; k++) s += prog(t, 13 + (k - 1) * .62, 13.35 + (k - 1) * .62); return s; }
+  if (t < 31) return 12;
+  if (t < 36) return 12 + 48 * prog(t, 31, 35);
+  return 42;                                                           // 收尾：2026 丙午
+}
+
+// 一圈字：items 均匀排在半径 r 上，转到第 s 步时第 s 个在正上方
+function ring(items, r, s, a, size, drawK, yangK, sub) {
+  if (a <= 0) return;
+  const n = items.length, cur = ((Math.round(s) % n) + n) % n;
+  ctx.save(); ctx.globalAlpha = a * .8; ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(C.x, C.y, r - size * .95, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * drawK); ctx.stroke(); ctx.restore();
+  items.forEach((ch, i) => {
+    const k = clamp(drawK * n - i);
+    if (k <= 0) return;
+    const ang = -Math.PI / 2 + (i - s) * Math.PI * 2 / n, x = C.x + Math.cos(ang) * r, y = C.y + Math.sin(ang) * r;
+    const on = i === cur, yang = i % 2 === 0;
+    const color = on ? RED : yangK > 0 && yang ? RED : INK;
+    const fade = yangK > 0 && !yang && !on ? 1 - yangK * .45 : 1;
+    text(ch, x, y + 2, { size, weight: on ? 900 : 700, color, alpha: a * k * fade });
+    if (sub) {
+      const x2 = C.x + Math.cos(ang) * (r + 44), y2 = C.y + Math.sin(ang) * (r + 44);
+      text(sub[i], x2, y2 + 1, { size: 24, color: on ? RED : MUTE, alpha: a * k * fade });
+    }
+  });
+}
+function pointer(a) {
+  if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = RED; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(C.x - 38, C.y - RO - 36, 76, 72, 12); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(C.x - 36, C.y - RI - 34, 72, 68, 12); ctx.stroke(); ctx.restore();
+}
+
+// ---------- 主时间线 ----------
+const render = t => {
+  background(t, '六十甲子', '天干地支');
+
+  // 转盘：开头到 36s；收尾再出现
+  const s = stepAt(t);
+  const ringA = Math.max(win(t, -1, 36.4, .6), prog(t, 51.6, 52.4));
+  const yangK = win(t, 23, 35.6, .6);
+  ring(ZHI, RO, s, ringA, 46, t > 50 ? 1 : prog(t, 0, 2.4), yangK, SHENG);
+  ring(GAN, RI, s, ringA, 42, t > 50 ? 1 : prog(t, 6.6, 8.6), yangK);
+  pointer(ringA * (t > 50 ? 1 : prog(t, 11, 11.8)));
+
+  // ① 开场问题
+  caption(t, 0, 3, '人人都有属相，|十二年一轮。', 'Everyone has a zodiac animal. Twelve years, one cycle.');
+  richText([['60', RED], [' 年？', INK]], 540, TOP, { size: 90, weight: 900, alpha: win(t, 3, 6.6) });
+  caption(t, 3, 6.6, '可老话说「六十年一甲子」，|为什么是六十，不是十二？', 'Yet a full cycle takes sixty years. Why sixty, not twelve?');
+  caption(t, 6.6, 11, '因为每一年，还配着一个天干，|一共十个。', 'Each year also carries one of ten Heavenly Stems.');
+  caption(t, 11, 13, '天干配地支，|每年各走一格。', 'Stem and branch each move one step a year.');
+
+  // ② 一年一格地转
+  const stepA = Math.max(win(t, 13, 21, .3), win(t, 31, 36.4, .3));
+  if (stepA > 0) {
+    const k = Math.round(s);
+    text(pair(k), 540, TOP, { size: 90, weight: 900, color: RED, alpha: stepA, spacing: 10 });
+    text(`第 ${k + 1 > 60 ? 1 : k + 1} 年`, 760, TOP + 8, { size: 30, color: MUTE, alpha: stepA, align: 'left' });
+  }
+  caption(t, 13, 17, '甲子、乙丑、丙寅……', 'Jiazi, Yichou, Bingyin...');
+  caption(t, 17, 21, '第 13 年，「子」转回来了，|配的却是「丙」。', 'In year thirteen, Zi comes back, paired with Bing.');
+
+  // ③ 提问：为什么只有 60
+  richText([['10 × 12 = 120', INK], [' ？', RED]], 540, TOP, { size: 70, weight: 900, alpha: win(t, 21.2, 23.2) });
+  caption(t, 21.2, 23.2, '十个天干，十二个地支，|本该配出 120 种，为什么只有 60？', 'Ten stems, twelve branches: 120 pairs. Why only sixty?');
+
+  // ④ 揭晓：阳配阳，阴配阴
+  richText([['阳', RED], ['配阳，', INK], ['阴', MUTE], ['配阴', INK]], 540, TOP, { size: 64, weight: 900, alpha: win(t, 23.4, 27), spacing: 4 });
+  caption(t, 23.4, 27, '单数位的阳干，永远碰上阳支；|阴干，永远碰上阴支。', 'A yang stem always meets a yang branch; yin meets yin.');
+  const nx = win(t, 27, 31);
+  if (nx > 0) {
+    text('甲丑', 440, TOP, { size: 64, weight: 900, color: MUTE, alpha: nx });
+    brush('x1', 390, TOP - 30, 490, TOP + 30, prog(t, 27.4, 27.8), 6, RED, nx);
+    richText([['120 ÷ 2 = ', INK], ['60', RED]], 700, TOP, { size: 56, weight: 900, alpha: nx * prog(t, 28.2, 28.8) });
+  }
+  caption(t, 27, 31, '所以「甲丑」这样的年，根本不存在。|只剩一半：六十。', 'So a "Jia-Chou" year never exists. Only half remain: sixty.');
+  caption(t, 31, 36.2, '转满六十步，|才回到甲子。', 'Sixty steps, and you are back at Jiazi.');
+
+  // ⑤ 年份尾数就是天干
+  const ya = win(t, 35.8, 45.2);
+  if (ya > 0) {
+    const digits = [4, 5, 6, 7, 8, 9, 0, 1, 2, 3];
+    digits.forEach((d, i) => {
+      const x = 540 + (i % 5 - 2) * 150, y = 520 + Math.floor(i / 5) * 190, a = ya * prog(t, 36.2 + i * .12, 36.7 + i * .12);
+      text(String(d), x, y, { size: 58, weight: 700, color: MUTE, alpha: a });
+      text(GAN[i], x, y + 76, { size: 60, weight: 900, color: RED, alpha: a });
+    });
+    [['1894', '甲午', '战争'], ['1898', '戊戌', '变法'], ['1911', '辛亥', '革命']].forEach(([y, g, e], i) => {
+      const a = ya * prog(t, 40.4 + i * .5, 41 + i * .5);
+      text(y, 290 + i * 250, 960, { size: 34, color: MUTE, alpha: a });
+      richText([[g, RED], [e, INK]], 290 + i * 250, 1020, { size: 44, weight: 900, alpha: a });
+    });
+  }
+  text('年份最后一位 → 天干', 540, TOP, { size: 52, weight: 900, alpha: win(t, 36, 45.2), spacing: 4 });
+  caption(t, 36, 40.2, '还有个小窍门：|年份的最后一位，就是天干。', 'A trick: the last digit of the year gives the stem.');
+  caption(t, 40.2, 45.2, '甲午战争、戊戌变法、辛亥革命，|名字都是这么来的。', 'That is how those famous years got their names.');
+
+  // ⑥ 今年，和花甲
+  const na = win(t, 45, 52);
+  text('2026', 540, 560, { size: 120, weight: 700, alpha: na });
+  richText([['丙午', RED], [' · 马年', INK]], 540, 700, { size: 72, weight: 900, alpha: na * prog(t, 45.6, 46.2), spacing: 6 });
+  text('上一个丙午：1966', 540, 820, { size: 40, color: MUTE, alpha: na * prog(t, 47, 47.6), spacing: 2 });
+  caption(t, 45, 48.6, '今年是 2026，丙午，马年。|上一个丙午，是 1966 年。', '2026 is Bing-Wu, Year of the Horse. The last was 1966.');
+  caption(t, 48.6, 52, '人活到六十岁，正好转完一圈，|这就叫「花甲」。', 'Live to sixty and you complete one full turn.');
+
+  // ⑦ 收尾
+  const ea = prog(t, 51.8, 52.6);
+  text('六十甲子', 500, TOP - 30, { size: 80, weight: 900, alpha: ea, spacing: 12 });
+  seal('花甲', 770, TOP - 36, 60, prog(t, 52.4, 53));
+  caption(t, 52, 57.5, '你出生那年是什么？|评论区写下你的干支。', 'What year were you born in? Tell us your stem and branch.');
+};
+
+// 节奏：开头放慢；提问停住倒数 5 秒（倒数圈放在转盘下方）
+scene(render, [
+  [0, 13, .85],
+  [13, 22.4], ['count', 5, 540, 1088],
+  [22.4, 57.5],
+]);
+</script>
+</body></html>

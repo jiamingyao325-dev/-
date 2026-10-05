@@ -113,13 +113,13 @@ const render = t => {
 
   // ⑥ 44.6–52s 今天
   const da = win(t, 44.3, 52.2);
-  [['内地', '1 斤 = 10 两 = 500 克', INK], ['香港', '1 斤 = 16 两 ≈ 605 克', RED], ['台湾', '1 台斤 = 16 两 = 600 克', RED]].forEach(([p, v, c], i) => {
+  [['内地', '1 斤 = 10 两 = 500 克', INK], ['香港', '1 斤 = 16 两 ≈ 605 克', RED], ['台湾', '1 台斤 = 16 两 = 600 克', RED], ['美国', '1 磅 = 16 盎司', RED]].forEach(([p, v, c], i) => {
     const a = da * prog(t, 44.4 + i * .7, 45 + i * .7);
     text(p, 230, 520 + i * 120, { size: 48, weight: 900, alpha: a, align: 'left', color: c });
     text(v, 380, 520 + i * 120, { size: 44, weight: 700, alpha: a, align: 'left' });
   });
   caption(t, 44.6, 48.4, '可在香港、台湾，|一斤至今还是十六两。', 'In Hong Kong and Taiwan, a jin is still sixteen liang.');
-  caption(t, 48.4, 52, '买菜的时候，|同样一斤，分量可不一样。', 'Same word, different weight at the market.');
+  caption(t, 48.4, 52, '就连美国，|一磅也还是十六盎司。', 'Even in America, a pound is still sixteen ounces.');
 
   // ⑦ 52.2–58s 收尾
   const ea = prog(t, 51.8, 52.6);

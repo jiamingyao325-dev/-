@@ -141,12 +141,12 @@ function countdown(e, n, x = W / 2, y = 1062) {
 
 // 场景入口：scene(render, plan)
 // plan 是一串分段：[起, 止, 速度] 按速度播放画面时间 起→止（速度 < 1 即放慢）；
-// ['count', n] 画面停在当前这一刻，叠一个 n 秒的倒数。片长由 plan 自动算出。
+// ['count', n, x?, y?] 画面停在当前这一刻，在 (x, y) 叠一个 n 秒的倒数（默认画面中下方）。片长由 plan 自动算出。
 let REAL_T = 0;                                                      // 真实时间：微尘等环境动画用它，停顿时也在动
 function scene(render, plan) {
   const segs = []; let real = 0, last = 0;
   for (const p of plan) {
-    if (p[0] === 'count') { segs.push({ r0: real, r1: real + p[1], s0: last, s1: last, count: p[1] }); real += p[1]; continue; }
+    if (p[0] === 'count') { segs.push({ r0: real, r1: real + p[1], s0: last, s1: last, count: p[1], at: p.slice(2) }); real += p[1]; continue; }
     const [a, b, sp = 1] = p, d = (b - a) / sp;
     segs.push({ r0: real, r1: real + d, s0: a, s1: b }); real += d; last = b;
   }
@@ -155,7 +155,7 @@ function scene(render, plan) {
     REAL_T = rt;
     const sg = segs.find(s => rt < s.r1) || segs[segs.length - 1];
     render(sg.count ? sg.s0 : lerp(sg.s0, sg.s1, clamp((rt - sg.r0) / (sg.r1 - sg.r0))));
-    if (sg.count) countdown(rt - sg.r0, sg.count);
+    if (sg.count) countdown(rt - sg.r0, sg.count, ...sg.at);
   };
   window.ready = (async () => {
     const faces = [
