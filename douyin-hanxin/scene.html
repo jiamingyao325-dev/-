@@ -31,7 +31,7 @@ const isRem = (name, i) => name[0] === 'g' && i >= Math.floor(N / +name.slice(1)
 const KF = [[0, 'scatter'], [2.6, 'g3'], [6.2, 'g5'], [9.8, 'g7'], [13.4, 'scatter'], [41.2, 'g3'], [42.8, 'g5'], [44.4, 'g7']];
 
 function soldiers(t) {
-  const alpha = Math.max(win(t, -1, 17, .6), win(t, 40.8, 46.4, .5));
+  const alpha = Math.max(win(t, -1, 17, .6), win(t, 40.6, 46.6, .5));
   if (alpha <= 0) return;
   let ki = 0; while (ki + 1 < KF.length && t >= KF[ki + 1][0]) ki++;
   const [tk, cur] = KF[ki], prev = ki ? KF[ki - 1][1] : cur;
@@ -76,19 +76,19 @@ const render = t => {
   caption(t, 13.6, 17, '韩信马上报出了人数。|你也猜一猜：一共几人？', 'Han Xin knew the number at once. Can you guess?');
 
   // ② 17.2–22s 原题
-  const qa = win(t, 17.2, 22);
+  const qa = win(t, 16.6, 21.8);
   text('《孙子算经》', 540, 450, { size: 34, color: MUTE, alpha: qa, spacing: 4 });
   ['今有物不知其数，', '三三数之剩二，', '五五数之剩三，', '七七数之剩二。', '问物几何？'].forEach((l, i) =>
-    text(l, 540, 550 + i * 78, { size: 50, weight: 700, alpha: qa * prog(t, 17.4 + i * .35, 17.9 + i * .35), spacing: 8, color: i === 4 ? RED : INK }));
+    text(l, 540, 550 + i * 78, { size: 50, weight: 700, alpha: qa * prog(t, 16.8 + i * .35, 17.3 + i * .35), spacing: 8, color: i === 4 ? RED : INK }));
   caption(t, 17.2, 22, '韩信的故事是传说，这道题的真出处，|是《孙子算经》里的「物不知数」。', 'The Han Xin story is legend. The puzzle comes from the Sunzi Suanjing.');
 
   // ③ 22.2–34s 程大位的歌诀
-  const sa = win(t, 22.2, 34);
+  const sa = win(t, 21.6, 34.2);
   text('明 · 程大位《算法统宗》', 540, 440, { size: 32, color: MUTE, alpha: sa, spacing: 4 });
   [['三人同行七十稀', '70'], ['五树梅花廿一枝', '21'], ['七子团圆正半月', '15'], ['除百零五便得知', '105']].forEach(([l, n], i) => {
-    const a = sa * prog(t, 22.6 + i * .8, 23.2 + i * .8);
+    const a = sa * prog(t, 21.9 + i * .8, 22.5 + i * .8);
     text(l, 250, 540 + i * 82, { size: 50, weight: 700, align: 'left', alpha: a, spacing: 6 });
-    text(n, 830, 540 + i * 82, { size: 52, weight: 700, color: RED, alpha: a * prog(t, 23 + i * .8, 23.5 + i * .8) });
+    text(n, 830, 540 + i * 82, { size: 52, weight: 700, color: RED, alpha: a * prog(t, 22.3 + i * .8, 22.8 + i * .8) });
   });
   richText([['2', RED], [' × 70 + ', INK], ['3', RED], [' × 21 + ', INK], ['2', RED], [' × 15 = 233', INK]], 540, 900,
     { size: 48, weight: 700, alpha: sa * prog(t, 26.6, 27.4) });
@@ -98,11 +98,11 @@ const render = t => {
   caption(t, 30.2, 34, '再减去 105，减到不能再减：|二十三。', 'Take away 105 until you can\'t: twenty-three.');
 
   // ④ 34.2–40.8s 为什么是 70、21、15
-  const ta = win(t, 34.2, 40.8);
+  const ta = win(t, 33.9, 41.2);
   if (ta > 0) {
     const xs = [300, 460, 620, 780], ys = [470, 570, 670, 770];
-    for (let i = 0; i < 5; i++) brush('th' + i, 220, 420 + i * 100, 860, 420 + i * 100, prog(t, 34.3 + i * .1, 35 + i * .1), 3.5, INK, ta * (i === 1 ? .9 : .45));
-    brush('tv', 380, 420, 380, 820, prog(t, 34.5, 35.2), 3.5, INK, ta * .9);
+    for (let i = 0; i < 5; i++) brush('th' + i, 220, 420 + i * 100, 860, 420 + i * 100, prog(t, 33.9 + i * .1, 34.6 + i * .1), 3.5, INK, ta * (i === 1 ? .9 : .45));
+    brush('tv', 380, 420, 380, 820, prog(t, 34.1, 34.8), 3.5, INK, ta * .9);
     ['÷3', '÷5', '÷7'].forEach((h, j) => text(h, xs[j + 1], ys[0], { size: 40, weight: 700, color: MUTE, alpha: ta * prog(t, 35, 35.5) }));
     text('余数', xs[0], ys[0], { size: 30, color: MUTE, alpha: ta * prog(t, 35, 35.5) });
     [70, 21, 15].forEach((n, r) => {
@@ -120,7 +120,7 @@ const render = t => {
   caption(t, 41.2, 46.2, '验算：二十三个兵，|三个条件全对上。', 'Check: twenty-three fits all three.');
 
   // ⑥ 46.4–51.6s 秦九韶与高斯
-  const ha = win(t, 46.4, 51.6);
+  const ha = win(t, 46.0, 51.8);
   text('1247', 540, 520, { size: 120, weight: 700, alpha: ha });
   text('南宋 · 秦九韶《数书九章》', 540, 640, { size: 40, weight: 700, alpha: ha, spacing: 4 });
   text('大衍求一术', 540, 720, { size: 46, weight: 900, color: RED, alpha: ha * prog(t, 47, 47.6), spacing: 10 });
@@ -129,15 +129,15 @@ const render = t => {
   caption(t, 49.2, 51.6, '五百多年后，高斯在欧洲|才系统地写下它。', 'Over five centuries later, Gauss set it down in Europe.');
 
   // ⑦ 51.8–55.4s 今天的名字
-  const na = win(t, 51.8, 55.4);
+  const na = win(t, 51.4, 55.6);
   text('中国剩余定理', 540, 640, { size: 84, weight: 900, alpha: na, spacing: 10 });
   text('Chinese Remainder Theorem', 540, 740, { size: 40, font: EN, italic: true, color: MUTE, alpha: na });
   caption(t, 51.8, 55.4, '今天，它写在全世界的数论课本里，|名字叫「中国剩余定理」。', 'Today every number theory textbook calls it the Chinese Remainder Theorem.');
 
   // ⑧ 55.6–59s 收尾
-  const ea = prog(t, 55.6, 56.4);
+  const ea = prog(t, 55.2, 56.0);
   text('韩信点兵', 500, TOP - 20, { size: 84, weight: 900, alpha: ea, spacing: 12 });
-  seal('点兵', 775, TOP - 26, 64, prog(t, 56.2, 56.8));
+  seal('点兵', 775, TOP - 26, 64, prog(t, 55.8, 56.4));
   text('23', 540, 680, { size: 220, weight: 900, color: RED, alpha: ea });
   caption(t, 55.6, 59.5, '一千五百年前的一道题，|答案一直是二十三。', 'A puzzle from fifteen centuries ago. The answer is still twenty-three.');
 };

@@ -86,7 +86,7 @@ function drawDots(t, t0, merge) {
 
 // 杨辉口诀：九子斜排，上下对易，左右相更，四维挺出
 const DIAMOND = { 1: [0, -2], 4: [-1, -1], 2: [1, -1], 7: [-2, 0], 5: [0, 0], 3: [2, 0], 8: [-1, 1], 6: [1, 1], 9: [0, 2] };
-const Y = { show: 35.0, swapA: 36.9, swapB: 38.3, pull: 39.7, done: 40.9 };
+const Y = { show: 34.3, swapA: 36.9, swapB: 38.3, pull: 39.7, done: 40.9 };
 function yangHui(t, alpha) {
   if (alpha <= 0) return;
   const kA = prog(t, Y.swapA, Y.swapA + 1), kB = prog(t, Y.swapB, Y.swapB + 1), kP = prog(t, Y.pull, Y.pull + 1.1);
@@ -129,7 +129,7 @@ function render(t) {
   background(t, '一个方格', '九宫格里的 15');
 
   // ① 0–4.8s 开门先抛问题：1 到 9 填进九宫格，横竖斜都相等？
-  const hookA = 1 - prog(t, 4.3, 4.8);
+  const hookA = 1 - prog(t, 4.4, 4.9);
   if (hookA > 0) {
     gridLines(G, prog(t, 0, .8), hookA, 'hk');
     for (let n = 1; n <= 9; n++) {                                   // 一到九依次填进格子
@@ -149,13 +149,13 @@ function render(t) {
   caption(t, 2.6, 4.7, '古人早就填出来了：|每一条，都是十五。', 'The ancients solved it: every line is fifteen.');
 
   // ② 4.6–14.6s 神龟、点阵、变成数字
-  if (t > 4.6 && t < 12) drawDots(t, 4.9, prog(t, 9.4, 11));
+  if (t > 4.6 && t < 12) drawDots(t, 4.5, prog(t, 9.4, 11));
   caption(t, 4.8, 7.4, '传说大禹治水，洛水里浮出一只神龟。', 'Legend says a turtle rose from the Luo River.');
   caption(t, 7.4, 10.2, '龟背上，是这样一幅点阵。', 'On its shell, a pattern of dots.');
   caption(t, 10.4, 14.6, '数一数每一团点：一到九，各占一格。', 'Count the dots: one to nine, one per cell.');
 
   // 主方格（10s 之后）的透明度：杨辉、八种样子两段让位
-  const mainA = t < 33.8 ? 1 : t < 41 ? 1 - prog(t, 33.8, 34.4) : t < 47 ? 0 : prog(t, 47.2, 48);
+  const mainA = t < 33.8 ? 1 : t < 41 ? 1 - prog(t, 33.8, 34.4) : t < 46.6 ? 0 : prog(t, 46.6, 47.4);
   if (t > 9.6) gridLines(G, prog(t, 9.6, 11), mainA, 'g');
 
   // ③ 14.8–26.6s 八条线，一条一条算
@@ -207,9 +207,9 @@ function render(t) {
   caption(t, 31.1, 34.4, '四条线都穿过中心，那一格只能是五。', 'Four lines meet in the middle. It has to be five.');
 
   // ⑥ 34.6–42s 杨辉的十六字口诀
-  const yA = t < 41.4 ? 1 : 1 - prog(t, 41.6, 42.2);
-  if (t > 34.6 && t < 42.4) yangHui(t, yA);
-  text('1275 · 南宋 杨辉《续古摘奇算法》', 540, TOP - 30, { size: 32, color: MUTE, alpha: win(t, 34.8, 42), spacing: 2 });
+  const yA = 1 - prog(t, 42.3, 42.9);
+  if (t > 34.6 && t < 43) yangHui(t, yA);
+  text('1275 · 南宋 杨辉《续古摘奇算法》', 540, TOP - 30, { size: 32, color: MUTE, alpha: win(t, 34.8, 42.8), spacing: 2 });
   caption(t, 34.6, 37.6, '1275 年，南宋杨辉|把排法写成了十六个字。', 'In 1275, Yang Hui wrote the method in sixteen characters.');
   caption(t, 37.8, 42, '照着做，一步一步，|就排出了洛书。', 'Follow them step by step, and the square appears.');
 
