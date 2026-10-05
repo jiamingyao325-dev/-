@@ -35,7 +35,7 @@ async function renderSegment(from, to, file, onFrame) {
   const ff = run('ffmpeg', [
     '-y', '-loglevel', 'error',
     '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-',
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', '-pix_fmt', 'yuv420p', file,
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '14', '-pix_fmt', 'yuv420p', file,
   ], { stdio: ['pipe', 'inherit', 'inherit'] });
   for (let f = from; f < to; f++) {
     await page.evaluate(t => window.render(t), f / FPS);
