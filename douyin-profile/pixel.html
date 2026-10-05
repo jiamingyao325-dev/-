@@ -12,6 +12,7 @@ const P = {
   white: '#fffaf0', robe: '#3f6d78', robe2: '#2e525b', gold: '#e6b450', wood: '#8a5a32', red: '#b8322a',
 };
 const N = 32;
+const MODE = new URLSearchParams(location.search).get('m') || 'kid';
 function sprite() {
   const g = Array.from({ length: N }, () => Array(N).fill(null));
   const set = (x, y, c) => { if (x >= 0 && y >= 0 && x < N && y < N) g[y][x] = c; };
@@ -103,6 +104,35 @@ function cat() {
   return g;
 }
 
+// 只有一只猫，双爪在胸前握一支大毛笔
+function cat2() {
+  const { g, set, ell } = grid(), F = '#a8937a', S = '#5e4b3a', W = '#efe4d2', E = '#6fae5b';
+  for (const sx of [-1, 1]) for (let y = 2; y < 9; y++) for (let x = 0; x < N; x++) {            // 耳朵
+    const cx = 16 + sx * 7.5, half = (y - 2) * .62; if (Math.abs(x + .5 - cx) <= half) set(x, y, F);
+    if (Math.abs(x + .5 - cx) <= half - 1.3 && y > 4) set(x, y, '#e8a59a');
+  }
+  ell(16, 13, 10.5, 7.5, F);                                                                     // 头
+  ell(16, 26, 9.5, 7, F, (x, y) => y >= 19);                                                     // 身子
+  ell(16, 26, 5, 5, W, (x, y) => y >= 21);                                                       // 白肚皮
+  ell(16, 17, 5, 3, W);                                                                          // 嘴边白毛
+  for (const [x, y] of [[15, 6], [16, 6], [15, 7], [16, 7], [13, 7], [18, 7], [12, 8], [19, 8], [7, 12], [8, 12], [24, 12], [25, 12], [6, 14], [7, 14], [25, 14], [26, 14], [8, 23], [9, 24], [23, 23], [22, 24]]) set(x, y, S);  // 虎斑
+  for (const ex of [11, 19]) { for (let y = 11; y < 14; y++) for (let x = ex; x < ex + 3; x++) set(x, y, E); for (let y = 11; y < 14; y++) set(ex + 1, y, P.ink); set(ex, 11, P.white); }
+  set(15, 15, '#d9867c'); set(16, 15, '#d9867c'); set(15, 16, P.ink); set(16, 17, P.ink); set(17, 16, P.ink); set(14, 17, P.ink);
+  set(10, 16, P.cheek); set(21, 16, P.cheek);
+  // 毛笔：从右上斜到左下，横在胸前
+  for (let i = 0; i < 17; i++) { const x = 25 - i, y = 18 + Math.floor(i * .55); set(x, y, P.wood); set(x, y + 1, '#6e4626'); }
+  set(26, 17, P.red); set(26, 18, P.red); set(27, 17, P.red);                                     // 笔尾红绳
+  for (const [x, y] of [[8, 27], [7, 27], [8, 28], [7, 28], [6, 28], [6, 29], [7, 29], [5, 30]]) set(x, y, P.ink);   // 笔头蘸墨
+  ell(12.5, 24.5, 2.2, 1.8, F); ell(20.5, 21, 2.2, 1.8, F);                                       // 两只爪子握笔
+  set(12, 25, S); set(13, 25, S); set(20, 22, S); set(21, 22, S);
+  // 描一圈深色外轮廓，小尺寸下更清楚
+  const o = g.map(r => r.slice());
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!g[y][x])
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const yy = y + dy, xx = x + dx;
+      if (yy >= 0 && yy < N && xx >= 0 && xx < N && g[yy][xx]) { o[y][x] = '#3a2e24'; break; } }
+  return o;
+}
+
 function drawSprite(c, g, x0, y0, s) {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++)
     if (g[y][x]) { c.fillStyle = g[y][x]; c.fillRect(x0 + x * s, y0 + y * s, s, s); }
@@ -126,14 +156,14 @@ function pixelText(c, str, x, y, px, scale, color) {
 
 window.ready = (async () => {
   document.fonts.add(await new FontFace('Noto Sans SC', 'url(../vibe-kit/fonts/NotoSansSC-700.ttf)', { weight: '700' }).load());
-  const g = { squid, cat, kid: sprite }[new URLSearchParams(location.search).get('m') || 'kid']();
+  const g = { squid, cat, cat2, kid: sprite }[new URLSearchParams(location.search).get('m') || 'kid']();
   const a = document.getElementById('a').getContext('2d');
   a.fillStyle = P.bg; a.fillRect(0, 0, 1080, 1080);
-  pixelSun(a, 540, 470, 13, 32);
+  if (MODE !== 'cat2') pixelSun(a, 540, 470, 13, 32);
   drawSprite(a, g, 28, 28, 32);
   const b = document.getElementById('b').getContext('2d');
   b.fillStyle = P.bg; b.fillRect(0, 0, 1125, 633);
-  pixelSun(b, 236, 300, 13, 14);
+  if (MODE !== 'cat2') pixelSun(b, 236, 300, 13, 14);
   drawSprite(b, g, 12, 92, 14);
   pixelText(b, '用代码，画中国', 470, 220, 16, 5, P.ink);
   pixelText(b, '老祖宗的学问，一格一格画给你看', 474, 345, 12, 3, P.robe2);
