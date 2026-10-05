@@ -1,5 +1,5 @@
 // 通用渲染器 —— 运行（<目录> 里要有 scene.html）：
-//   node vibe-kit/render.js <目录>                出全片 <目录>/output/video.mp4（1080×1920，30fps），用满所有 CPU 核
+//   node vibe-kit/render.js <目录>                出全片 <目录>/output/video.mp4（带配乐）和 video_静音.mp4，1080×1920，30fps，用满所有 CPU 核
 //   node vibe-kit/render.js <目录> --workers 2    指定并行路数
 //   node vibe-kit/render.js <目录> --music <文件> 换配乐；默认用 vibe-kit/music/vibe.wav，--music none 出静音版
 //   node vibe-kit/render.js <目录> --stills 3,20  只截几张静帧到 <目录>/output/still_<秒>.png
@@ -98,6 +98,13 @@ async function renderSegment(from, to, file, onFrame) {
     '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, ...audioIn, '-map', '0:v', ...audioFx,
     '-t', String(dur), '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k',
     '-movflags', '+faststart', path.join(OUT, 'video.mp4'),
+  ], { stdio: 'inherit' }).done;
+  // 另出一份静音版：发布时在抖音里选曲库正版配乐
+  await run('ffmpeg', [
+    '-y', '-loglevel', 'error', '-i', path.join(OUT, 'video.mp4'),
+    '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+    '-map', '0:v', '-map', '1:a', '-t', String(dur), '-c:v', 'copy', '-c:a', 'aac',
+    '-movflags', '+faststart', path.join(OUT, 'video_静音.mp4'),
   ], { stdio: 'inherit' }).done;
   for (const [, , f] of segs) fs.unlinkSync(f);
   fs.unlinkSync(list);
