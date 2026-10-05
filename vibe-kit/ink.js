@@ -111,7 +111,7 @@ function seal(chars, x, y, size, alpha) {
 function background(t, title, subtitle) {
   ctx.clearRect(0, 0, W, H);
   ctx.drawImage(paper, 0, 0);
-  const dr = rng(99);
+  const dr = rng(99); t = REAL_T;
   for (let i = 0; i < 40; i++) {
     const x0 = dr() * W, y0 = dr() * H, sp = 6 + dr() * 14, ph = dr() * 6;
     const x = (x0 + Math.sin(t * .3 + ph) * 30) % W, y = ((y0 - t * sp) % H + H) % H;
@@ -127,10 +127,36 @@ function background(t, title, subtitle) {
   text('本视频由 AI 用代码生成', 996, 120, { size: 22, color: MUTE, align: 'right' });
 }
 
-// 场景入口：scene(时长, render)。渲染器调用 window.render(t)
-function scene(duration, render) {
-  window.render = render;
-  window.DURATION = duration;
+// 倒数圈：画面停住时出现，n 秒从 n 数到 1
+function countdown(e, n, x = W / 2, y = 1062) {
+  const a = win(e, 0, n, .3), left = Math.ceil(n - e), frac = e % 1;
+  ctx.save(); ctx.globalAlpha = a; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(122,110,96,.25)'; ctx.beginPath(); ctx.arc(x, y, 54, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = RED; ctx.beginPath(); ctx.arc(x, y, 54, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - frac)); ctx.stroke();
+  ctx.restore();
+  const pop = 1 + .25 * Math.max(0, 1 - frac * 5);
+  ctx.save(); ctx.translate(x, y + 4); ctx.scale(pop, pop);
+  text(String(Math.max(1, left)), 0, 0, { size: 64, weight: 900, color: RED, alpha: a }); ctx.restore();
+}
+
+// 场景入口：scene(render, plan)
+// plan 是一串分段：[起, 止, 速度] 按速度播放画面时间 起→止（速度 < 1 即放慢）；
+// ['count', n] 画面停在当前这一刻，叠一个 n 秒的倒数。片长由 plan 自动算出。
+let REAL_T = 0;                                                      // 真实时间：微尘等环境动画用它，停顿时也在动
+function scene(render, plan) {
+  const segs = []; let real = 0, last = 0;
+  for (const p of plan) {
+    if (p[0] === 'count') { segs.push({ r0: real, r1: real + p[1], s0: last, s1: last, count: p[1] }); real += p[1]; continue; }
+    const [a, b, sp = 1] = p, d = (b - a) / sp;
+    segs.push({ r0: real, r1: real + d, s0: a, s1: b }); real += d; last = b;
+  }
+  window.DURATION = real;
+  window.render = rt => {
+    REAL_T = rt;
+    const sg = segs.find(s => rt < s.r1) || segs[segs.length - 1];
+    render(sg.count ? sg.s0 : lerp(sg.s0, sg.s1, clamp((rt - sg.r0) / (sg.r1 - sg.r0))));
+    if (sg.count) countdown(rt - sg.r0, sg.count);
+  };
   window.ready = (async () => {
     const faces = [
       ['Noto Serif SC', 'NotoSerifSC-400.ttf', { weight: '400' }],
@@ -139,7 +165,7 @@ function scene(duration, render) {
       ['EB Garamond', 'EBGaramond-Italic.ttf', { style: 'italic' }],
     ];
     for (const [name, file, desc] of faces) document.fonts.add(await new FontFace(name, `url(${KIT}fonts/${file})`, desc).load());
-    render(0);
+    window.render(0);
     return true;
   })();
 }

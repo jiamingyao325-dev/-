@@ -5,7 +5,7 @@
 <canvas id="c" width="1080" height="1920"></canvas>
 <script src="../vibe-kit/ink.js"></script>
 <script>
-// 《一队兵：物不知数》—— 全部画面由代码绘制。render(t) 画出第 t 秒的画面。
+// 《韩信点兵：物不知数》—— 全部画面由代码绘制。render(t) 画出第 t 秒的画面。
 const N = 23, TOP = 330, CY = 650;
 
 // ---------- 士兵（墨点）的几种队形 ----------
@@ -60,27 +60,27 @@ function soldiers(t) {
 }
 
 // ---------- 主时间线 ----------
-scene(59, t => {
-  background(t, '一队兵', '物不知数');
+const render = t => {
+  background(t, '韩信点兵', '物不知数');
 
   // ① 0–17s 题目：点兵
   soldiers(t);
   text('？', 540, TOP, { size: 120, weight: 900, color: RED, alpha: Math.max(win(t, -1, 2.6), win(t, 13.6, 17)) });
   const counts = [[2.6, 6.2, '三', '2'], [6.2, 9.8, '五', '3'], [9.8, 13.4, '七', '2']];
   for (const [a, b, n, r] of counts)
-    richText([[`${n}个${n}个数，剩 `, INK], [r, RED]], 540, TOP, { size: 56, weight: 700, alpha: win(t, a + 1, b), spacing: 2 });
-  caption(t, 0, 2.6, '一队兵，不知道有多少人。', 'A troop of soldiers. Nobody knows how many.');
-  caption(t, 2.6, 6.2, '三个三个数，剩两个。', 'Count by threes: two left over.');
-  caption(t, 6.2, 9.8, '五个五个数，剩三个。', 'By fives: three left over.');
-  caption(t, 9.8, 13.4, '七个七个数，又剩两个。', 'By sevens: two left over again.');
-  caption(t, 13.6, 17, '问：这队兵，一共有几人？|先别往下看，猜一猜。', 'How many soldiers? Take a guess first.');
+    richText([[`${n}人一排，剩 `, INK], [r, RED]], 540, TOP, { size: 56, weight: 700, alpha: win(t, a + 1, b), spacing: 2 });
+  caption(t, 0, 2.6, '传说韩信点兵，|从来不一个一个地数。', 'Legend says General Han Xin never counted soldiers one by one.');
+  caption(t, 2.6, 6.2, '他只让士兵三人一排：|剩下两个。', 'He lined them up in threes: two left over.');
+  caption(t, 6.2, 9.8, '五人一排：|剩下三个。', 'In fives: three left over.');
+  caption(t, 9.8, 13.4, '七人一排：|又剩两个。', 'In sevens: two left over again.');
+  caption(t, 13.6, 17, '韩信马上报出了人数。|你也猜一猜：一共几人？', 'Han Xin knew the number at once. Can you guess?');
 
   // ② 17.2–22s 原题
   const qa = win(t, 17.2, 22);
   text('《孙子算经》', 540, 450, { size: 34, color: MUTE, alpha: qa, spacing: 4 });
   ['今有物不知其数，', '三三数之剩二，', '五五数之剩三，', '七七数之剩二。', '问物几何？'].forEach((l, i) =>
     text(l, 540, 550 + i * 78, { size: 50, weight: 700, alpha: qa * prog(t, 17.4 + i * .35, 17.9 + i * .35), spacing: 8, color: i === 4 ? RED : INK }));
-  caption(t, 17.2, 22, '这是《孙子算经》里的一道题，|叫「物不知数」，距今约一千五百年。', 'A puzzle from the Sunzi Suanjing, some fifteen hundred years old.');
+  caption(t, 17.2, 22, '韩信的故事是传说，这道题的真出处，|是《孙子算经》里的「物不知数」。', 'The Han Xin story is legend. The puzzle comes from the Sunzi Suanjing.');
 
   // ③ 22.2–34s 程大位的歌诀
   const sa = win(t, 22.2, 34);
@@ -136,10 +136,19 @@ scene(59, t => {
 
   // ⑧ 55.6–59s 收尾
   const ea = prog(t, 55.6, 56.4);
-  text('一队兵', 515, TOP - 20, { size: 84, weight: 900, alpha: ea, spacing: 14 });
-  seal('点兵', 710, TOP - 26, 64, prog(t, 56.2, 56.8));
+  text('韩信点兵', 500, TOP - 20, { size: 84, weight: 900, alpha: ea, spacing: 12 });
+  seal('点兵', 775, TOP - 26, 64, prog(t, 56.2, 56.8));
   text('23', 540, 680, { size: 220, weight: 900, color: RED, alpha: ea });
   caption(t, 55.6, 59.5, '一千五百年前的一道题，|答案一直是二十三。', 'A puzzle from fifteen centuries ago. The answer is still twenty-three.');
-});
+};
+
+// 节奏：前面数兵放慢；「猜一猜」停住倒数 5 秒；歌诀算式放慢
+scene(render, [
+  [0, 13.4, .8],
+  [13.4, 15.2], ['count', 5],
+  [15.2, 22.2],
+  [22.2, 34, .85],
+  [34, 59],
+]);
 </script>
 </body></html>

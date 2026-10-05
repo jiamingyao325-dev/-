@@ -62,7 +62,7 @@ function halving(t, a, t0) {
 }
 
 // ---------- 主时间线 ----------
-scene(58, t => {
+const render = t => {
   background(t, '半斤八两', '一杆老秤');
 
   // ① 0–4.6s 问题
@@ -128,6 +128,13 @@ scene(58, t => {
   text('半斤八两', 505, TOP - 20, { size: 84, weight: 900, alpha: ea, spacing: 12 });
   seal('秤星', 760, TOP - 26, 64, prog(t, 52.8, 53.4));
   caption(t, 52.2, 58.5, '秤上十六颗星，|称的是货，也是良心。', 'Sixteen stars on a beam: they weigh goods, and conscience.');
-});
+};
+
+// 节奏：开头问题停住倒数 3 秒；秤和秤星那段放慢
+scene(render, [
+  [0, 2], ['count', 3],
+  [2, 21.2, .85],
+  [21.2, 58],
+]);
 </script>
 </body></html>

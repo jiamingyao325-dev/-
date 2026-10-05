@@ -85,13 +85,14 @@ async function renderSegment(from, to, file, onFrame) {
   if (music === 'none' || !fs.existsSync(music)) music = null;
   let audioIn = ['-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100'], audioFx = ['-map', '1:a'];
   if (music) {
-    // 曲子比片子短时，把结尾那段轻的部分再接一遍（交叉淡化 1.5 秒），最后 2.5 秒淡出
+    // 曲子比片子短时：在第 40 秒处往回接一段主歌（交叉淡化 1.5 秒），保留原曲的结尾；最后 2.5 秒淡出
     const len = Number(require('child_process').execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', music]));
-    const fade = `afade=t=out:st=${dur - 2.5}:d=2.5`;
+    const fade = `afade=t=out:st=${dur - 2.5}:d=2.5`, X = 40, E = dur - len + 2;
+    if (E > X - 16) throw new Error(`片长 ${dur}s 比配乐长太多，最多支持 ${len + X - 18}s`);
     audioIn = ['-i', music];
     audioFx = dur <= len - 1
       ? ['-filter_complex', `[1:a]atrim=0:${dur},${fade}[a]`, '-map', '[a]']
-      : ['-filter_complex', `[1:a]atrim=0:${len - 2.7},asetpts=N/SR/TB[x];[1:a]atrim=${len - 8.7}:${len},asetpts=N/SR/TB[y];[x][y]acrossfade=d=1.5,apad,atrim=0:${dur},${fade}[a]`, '-map', '[a]'];
+      : ['-filter_complex', `[1:a]atrim=0:${X},asetpts=N/SR/TB[x];[1:a]atrim=${X - E}:${len},asetpts=N/SR/TB[y];[x][y]acrossfade=d=1.5,apad,atrim=0:${dur},${fade}[a]`, '-map', '[a]'];
   }
   await run('ffmpeg', [
     '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, ...audioIn, '-map', '0:v', ...audioFx,
