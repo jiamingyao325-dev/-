@@ -1,6 +1,7 @@
 // 渲染《一个方格》—— 运行：
 //   node render.js                 出全片 output/luoshu.mp4（1080×1920，30fps），默认用满所有 CPU 核并行
 //   node render.js --workers 2     指定并行路数
+//   node render.js --music music/bgm.wav  配上配乐（自动截到片长，结尾 2.5 秒淡出）；不传则是静音音轨
 //   node render.js --stills 3,20   只截几张静帧到 output/still_<秒>.png，用来检查画面
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
@@ -75,13 +76,16 @@ async function renderSegment(from, to, file, onFrame) {
   console.log(`${frames} 帧，${segs.length} 路并行`);
   await Promise.all(segs.map(([a, b, file]) => renderSegment(a, b, file, tick)));
 
-  // 拼接各段，并配上一条静音音轨（抖音里再选配乐）
+  // 拼接各段，配上配乐（或静音音轨）
   const list = path.join(OUT, 'segments.txt');
   fs.writeFileSync(list, segs.map(([, , f]) => `file '${f}'`).join('\n'));
+  const music = arg('--music'), dur = frames / FPS;
+  const audioIn = music ? ['-i', music] : ['-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100'];
+  const audioFx = music ? ['-af', `apad,atrim=0:${dur},afade=t=out:st=${dur - 2.5}:d=2.5`] : [];
   await run('ffmpeg', [
-    '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list,
-    '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
-    '-shortest', '-c:v', 'copy', '-c:a', 'aac', '-movflags', '+faststart', path.join(OUT, 'luoshu.mp4'),
+    '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, ...audioIn, ...audioFx,
+    '-map', '0:v', '-map', '1:a', '-t', String(dur), '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k',
+    '-movflags', '+faststart', path.join(OUT, 'luoshu.mp4'),
   ], { stdio: 'inherit' }).done;
   for (const [, , f] of segs) fs.unlinkSync(f);
   fs.unlinkSync(list);
