@@ -1,0 +1,145 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="../vibe-kit/ink.js"></script>
+<script>
+// 《一队兵：物不知数》—— 全部画面由代码绘制。render(t) 画出第 t 秒的画面。
+const N = 23, TOP = 330, CY = 650;
+
+// ---------- 士兵（墨点）的几种队形 ----------
+const LAYOUT = {};
+LAYOUT.scatter = (() => {
+  const r = rng(23), pts = [];
+  while (pts.length < N) {
+    const p = [170 + r() * 740, 430 + r() * 460];
+    if (pts.every(q => Math.hypot(p[0] - q[0], p[1] - q[1]) > 78)) pts.push(p);
+  }
+  return pts;
+})();
+const GAP = { 3: 82, 5: 120, 7: 140 }, ROW = 52;
+for (const k of [3, 5, 7]) {
+  const G = Math.ceil(N / k);
+  LAYOUT['g' + k] = Array.from({ length: N }, (_, i) => {
+    const g = Math.floor(i / k), j = i % k;
+    return [540 + (g - (G - 1) / 2) * GAP[k], CY + (j - (k - 1) / 2) * ROW];
+  });
+}
+const isRem = (name, i) => name[0] === 'g' && i >= Math.floor(N / +name.slice(1)) * +name.slice(1);
+// 关键帧：[时刻, 队形]
+const KF = [[0, 'scatter'], [2.6, 'g3'], [6.2, 'g5'], [9.8, 'g7'], [13.4, 'scatter'], [41.2, 'g3'], [42.8, 'g5'], [44.4, 'g7']];
+
+function soldiers(t) {
+  const alpha = Math.max(win(t, -1, 17, .6), win(t, 40.8, 46.4, .5));
+  if (alpha <= 0) return;
+  let ki = 0; while (ki + 1 < KF.length && t >= KF[ki + 1][0]) ki++;
+  const [tk, cur] = KF[ki], prev = ki ? KF[ki - 1][1] : cur;
+  const quick = tk > 40 ? .7 : 1;
+  const arrive = prog(t, tk + .7 * quick, tk + 1.2 * quick);
+
+  // 整组的框
+  if (cur[0] === 'g') {
+    const k = +cur.slice(1), full = Math.floor(N / k);
+    for (let g = 0; g < full; g++) {
+      const [x] = LAYOUT[cur][g * k];
+      ctx.save(); ctx.globalAlpha = alpha * arrive * .35; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect(x - 28, CY - (k - 1) / 2 * ROW - 28, 56, (k - 1) * ROW + 56, 28); ctx.stroke(); ctx.restore();
+    }
+  }
+  for (let i = 0; i < N; i++) {
+    const k = prog(t, tk + i * .02 * quick, tk + .9 * quick + i * .02 * quick);
+    const a = LAYOUT[prev][i], b = LAYOUT[cur][i];
+    const x = lerp(a[0], b[0], k), y = lerp(a[1], b[1], k);
+    const red = (isRem(cur, i) ? arrive : 0) + (isRem(prev, i) ? 1 - k : 0);
+    const appear = t < 1 ? prog(t, i * .02, .4 + i * .02) : 1;
+    ctx.globalAlpha = alpha * appear; ctx.fillStyle = red > .5 ? RED : INK;
+    ctx.beginPath(); ctx.arc(x, y, 14 * (.5 + .5 * appear), 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ---------- 主时间线 ----------
+scene(59, t => {
+  background(t, '一队兵', '物不知数');
+
+  // ① 0–17s 题目：点兵
+  soldiers(t);
+  text('？', 540, TOP, { size: 120, weight: 900, color: RED, alpha: Math.max(win(t, -1, 2.6), win(t, 13.6, 17)) });
+  const counts = [[2.6, 6.2, '三', '2'], [6.2, 9.8, '五', '3'], [9.8, 13.4, '七', '2']];
+  for (const [a, b, n, r] of counts)
+    richText([[`${n}个${n}个数，剩 `, INK], [r, RED]], 540, TOP, { size: 56, weight: 700, alpha: win(t, a + 1, b), spacing: 2 });
+  caption(t, 0, 2.6, '一队兵，不知道有多少人。', 'A troop of soldiers. Nobody knows how many.');
+  caption(t, 2.6, 6.2, '三个三个数，剩两个。', 'Count by threes: two left over.');
+  caption(t, 6.2, 9.8, '五个五个数，剩三个。', 'By fives: three left over.');
+  caption(t, 9.8, 13.4, '七个七个数，又剩两个。', 'By sevens: two left over again.');
+  caption(t, 13.6, 17, '问：这队兵，一共有几人？|先别往下看，猜一猜。', 'How many soldiers? Take a guess first.');
+
+  // ② 17.2–22s 原题
+  const qa = win(t, 17.2, 22);
+  text('《孙子算经》', 540, 450, { size: 34, color: MUTE, alpha: qa, spacing: 4 });
+  ['今有物不知其数，', '三三数之剩二，', '五五数之剩三，', '七七数之剩二。', '问物几何？'].forEach((l, i) =>
+    text(l, 540, 550 + i * 78, { size: 50, weight: 700, alpha: qa * prog(t, 17.4 + i * .35, 17.9 + i * .35), spacing: 8, color: i === 4 ? RED : INK }));
+  caption(t, 17.2, 22, '这是《孙子算经》里的一道题，|叫「物不知数」，距今约一千五百年。', 'A puzzle from the Sunzi Suanjing, some fifteen hundred years old.');
+
+  // ③ 22.2–34s 程大位的歌诀
+  const sa = win(t, 22.2, 34);
+  text('明 · 程大位《算法统宗》', 540, 440, { size: 32, color: MUTE, alpha: sa, spacing: 4 });
+  [['三人同行七十稀', '70'], ['五树梅花廿一枝', '21'], ['七子团圆正半月', '15'], ['除百零五便得知', '105']].forEach(([l, n], i) => {
+    const a = sa * prog(t, 22.6 + i * .8, 23.2 + i * .8);
+    text(l, 250, 540 + i * 82, { size: 50, weight: 700, align: 'left', alpha: a, spacing: 6 });
+    text(n, 830, 540 + i * 82, { size: 52, weight: 700, color: RED, alpha: a * prog(t, 23 + i * .8, 23.5 + i * .8) });
+  });
+  richText([['2', RED], [' × 70 + ', INK], ['3', RED], [' × 21 + ', INK], ['2', RED], [' × 15 = 233', INK]], 540, 900,
+    { size: 48, weight: 700, alpha: sa * prog(t, 26.6, 27.4) });
+  richText([['233 − 105 − 105 = ', INK], ['23', RED]], 540, 990, { size: 48, weight: 700, alpha: sa * prog(t, 30.2, 31) });
+  caption(t, 22.2, 26, '明代程大位，把解法编成了四句歌诀。', 'In the Ming dynasty, Cheng Dawei turned the method into a rhyme.');
+  caption(t, 26.2, 30, '剩几个，就乘口诀里的数，|加起来是 233。', 'Multiply each remainder by its number. Add them: 233.');
+  caption(t, 30.2, 34, '再减去 105，减到不能再减：|二十三。', 'Take away 105 until you can\'t: twenty-three.');
+
+  // ④ 34.2–40.8s 为什么是 70、21、15
+  const ta = win(t, 34.2, 40.8);
+  if (ta > 0) {
+    const xs = [300, 460, 620, 780], ys = [470, 570, 670, 770];
+    for (let i = 0; i < 5; i++) brush('th' + i, 220, 420 + i * 100, 860, 420 + i * 100, prog(t, 34.3 + i * .1, 35 + i * .1), 3.5, INK, ta * (i === 1 ? .9 : .45));
+    brush('tv', 380, 420, 380, 820, prog(t, 34.5, 35.2), 3.5, INK, ta * .9);
+    ['÷3', '÷5', '÷7'].forEach((h, j) => text(h, xs[j + 1], ys[0], { size: 40, weight: 700, color: MUTE, alpha: ta * prog(t, 35, 35.5) }));
+    text('余数', xs[0], ys[0], { size: 30, color: MUTE, alpha: ta * prog(t, 35, 35.5) });
+    [70, 21, 15].forEach((n, r) => {
+      const a = ta * prog(t, 36.6 + r * .9, 37.1 + r * .9);
+      text(String(n), xs[0], ys[r + 1], { size: 52, weight: 700, alpha: ta * prog(t, 35.2 + r * .2, 35.7 + r * .2) });
+      [3, 5, 7].forEach((d, j) => text(String(n % d), xs[j + 1], ys[r + 1], { size: 52, weight: 700, alpha: a, color: n % d ? RED : MUTE }));
+    });
+  }
+  text('为什么偏偏是 70、21、15？', 540, TOP, { size: 46, weight: 700, alpha: win(t, 34.4, 40.8), spacing: 2 });
+  caption(t, 34.4, 36.6, '这三个数，是怎么挑出来的？', 'Why these three numbers?');
+  caption(t, 36.6, 40.8, '每个数只管一件事：|除以「自己」余一，其余都除尽。', 'Each leaves one for its own divisor, nothing for the others.');
+
+  // ⑤ 41–46.2s 验算
+  text('23', 540, TOP, { size: 110, weight: 900, color: RED, alpha: win(t, 41.2, 46.2) });
+  caption(t, 41.2, 46.2, '验算：二十三个兵，|三个条件全对上。', 'Check: twenty-three fits all three.');
+
+  // ⑥ 46.4–51.6s 秦九韶与高斯
+  const ha = win(t, 46.4, 51.6);
+  text('1247', 540, 520, { size: 120, weight: 700, alpha: ha });
+  text('南宋 · 秦九韶《数书九章》', 540, 640, { size: 40, weight: 700, alpha: ha, spacing: 4 });
+  text('大衍求一术', 540, 720, { size: 46, weight: 900, color: RED, alpha: ha * prog(t, 47, 47.6), spacing: 10 });
+  text('1801 · 高斯《算术研究》', 540, 860, { size: 34, color: MUTE, alpha: ha * prog(t, 49.2, 49.8), spacing: 4 });
+  caption(t, 46.4, 49.2, '1247 年，南宋秦九韶|把它推成了通用的算法。', 'In 1247, Qin Jiushao made it a general method.');
+  caption(t, 49.2, 51.6, '五百多年后，高斯在欧洲|才系统地写下它。', 'Over five centuries later, Gauss set it down in Europe.');
+
+  // ⑦ 51.8–55.4s 今天的名字
+  const na = win(t, 51.8, 55.4);
+  text('中国剩余定理', 540, 640, { size: 84, weight: 900, alpha: na, spacing: 10 });
+  text('Chinese Remainder Theorem', 540, 740, { size: 40, font: EN, italic: true, color: MUTE, alpha: na });
+  caption(t, 51.8, 55.4, '今天，它写在全世界的数论课本里，|名字叫「中国剩余定理」。', 'Today every number theory textbook calls it the Chinese Remainder Theorem.');
+
+  // ⑧ 55.6–59s 收尾
+  const ea = prog(t, 55.6, 56.4);
+  text('一队兵', 515, TOP - 20, { size: 84, weight: 900, alpha: ea, spacing: 14 });
+  seal('点兵', 710, TOP - 26, 64, prog(t, 56.2, 56.8));
+  text('23', 540, 680, { size: 220, weight: 900, color: RED, alpha: ea });
+  caption(t, 55.6, 59.5, '一千五百年前的一道题，|答案一直是二十三。', 'A puzzle from fifteen centuries ago. The answer is still twenty-three.');
+});
+</script>
+</body></html>
