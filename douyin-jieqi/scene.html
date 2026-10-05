@@ -1,0 +1,116 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="../vibe-kit/ink.js"></script>
+<script>
+// 《二十四节气：其实是阳历》—— 全部画面由代码绘制。render(t) 画出第 t 秒的画面。
+const TOP = 300;
+const JQ = ['立春', '雨水', '惊蛰', '春分', '清明', '谷雨', '立夏', '小满', '芒种', '夏至', '小暑', '大暑',
+            '立秋', '处暑', '白露', '秋分', '寒露', '霜降', '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'];
+const SEASON = i => [ '#5b7a4a', '#b8322a', '#b58a3a', '#4a5f7a' ][Math.floor(i / 6)];   // 春绿 夏朱 秋金 冬青
+const C = { x: 540, y: 690 }, R = 300;
+const angOf = i => -Math.PI / 2 + i * Math.PI * 2 / 24;               // 立春在正上方，顺时针
+
+function wheel(t, a, drawK, hot = {}) {
+  if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha = a * .7; ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(C.x, C.y, R - 70, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * drawK); ctx.stroke(); ctx.restore();
+  JQ.forEach((n, i) => {
+    const k = clamp(drawK * 24 - i);
+    if (k <= 0) return;
+    const ang = angOf(i), x = C.x + Math.cos(ang) * R, y = C.y + Math.sin(ang) * R;
+    ctx.save(); ctx.globalAlpha = a * k * .55; ctx.fillStyle = SEASON(i);
+    ctx.beginPath(); ctx.arc(C.x + Math.cos(ang) * (R - 70), C.y + Math.sin(ang) * (R - 70), 5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    const h = hot[i] || 0;
+    text(n, x, y, { size: 30 + h * 10, weight: h > .5 ? 900 : 700, color: h > .5 ? RED : SEASON(i), alpha: a * k * (1 - (hot.dim || 0) * (1 - h) * .7) });
+  });
+}
+function sun(i, a) {                                                   // 太阳走到第 i 个节气（可以是小数）
+  if (a <= 0) return;
+  const ang = angOf(i), x = C.x + Math.cos(ang) * (R - 70), y = C.y + Math.sin(ang) * (R - 70);
+  ctx.save(); ctx.globalAlpha = a;
+  const g = ctx.createRadialGradient(x, y, 0, x, y, 34); g.addColorStop(0, 'rgba(200,60,40,.9)'); g.addColorStop(1, 'rgba(200,60,40,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 34, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = RED; ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+}
+
+// ---------- 主时间线 ----------
+const render = t => {
+  background(t, '二十四节气', '其实是阳历');
+
+  // ① 节气歌
+  const sa = win(t, -1, 7.4);
+  ['春雨惊春清谷天', '夏满芒夏暑相连', '秋处露秋寒霜降', '冬雪雪冬小大寒'].forEach((l, i) =>
+    text(l, 540, 520 + i * 120, { size: 66, weight: 900, alpha: sa * prog(t, i * .7, .5 + i * .7), spacing: 14, color: SEASON(i * 6) }));
+  caption(t, 0, 3.6, '这首歌，|你小时候一定背过。', 'You surely learned this rhyme as a child.');
+  caption(t, 3.6, 7.4, '它一句七个字，|藏着一年的二十四个节气。', 'Seven characters a line, twenty-four solar terms in a year.');
+
+  // ② 节气轮
+  const wa = win(t, 7.2, 47.0, .5);
+  const hot = {};
+  if (t > 24 && t < 31) { hot.dim = win(t, 24, 31); [0, 4, 9, 21].forEach(i => hot[i] = win(t, 24.4, 31)); }
+  if (t > 31 && t < 38.6) { hot.dim = win(t, 31, 38.6); hot[4] = win(t, 31, 34.8); hot[21] = win(t, 34.8, 38.6); }
+  if (t > 38.6) { hot.dim = win(t, 38.6, 48.6); hot[16] = win(t, 41.2, 48.6); }
+  wheel(t, wa, prog(t, 7.4, 9.6), hot);
+  const sunI = t < 10 ? 0 : t < 14.6 ? 24 * prog(t, 10, 14.4) : t < 41 ? 0 : 16 * prog(t, 41, 42.6);
+  sun(sunI, wa * (t < 10 ? prog(t, 9.6, 10) : 1));
+  caption(t, 7.4, 10.4, '一年二十四个，|大约半个月一个。', 'Twenty-four a year, about one every half month.');
+  caption(t, 10.4, 14.6, '古人看太阳在天上走到哪，|就定下哪个节气。', 'The ancients set each term by where the sun stood.');
+
+  // ③ 提问：农历还是阳历？
+  richText([['农历', INK], [' 还是 ', MUTE], ['阳历', INK], [' ？', RED]], 540, TOP, { size: 68, weight: 900, alpha: win(t, 14.8, 17.6) });
+  caption(t, 14.8, 17.6, '考考你：二十四节气，|是农历，还是阳历？', 'Quiz: are the solar terms lunar, or solar?');
+
+  // ④ 揭晓：阳历
+  richText([['答案：', INK], ['阳历', RED]], 540, TOP, { size: 76, weight: 900, alpha: win(t, 17.8, 24) });
+  caption(t, 17.8, 21, '答案是：阳历。|它跟着太阳走，不跟月亮。', 'Answer: solar. They follow the sun, not the moon.');
+  caption(t, 21, 24, '很多人以为是农历，|因为它总印在老黄历上。', 'Many assume lunar, since they sit in the old almanac.');
+  // 固定日期
+  const da = win(t, 24.2, 31);
+  [[0, '2 月 4 日前后'], [4, '4 月 5 日前后'], [9, '6 月 21 日前后'], [21, '12 月 22 日前后']].forEach(([i, d], j) => {
+    const ang = angOf(i), x = C.x + Math.cos(ang) * (R + 0), y = C.y + Math.sin(ang) * (R + 0);
+    const dy = i === 0 ? -48 : 44;
+    text(d, x, y + dy, { size: 26, color: RED, alpha: da * prog(t, 24.6 + j * .3, 25 + j * .3) });
+  });
+  caption(t, 24.2, 27.6, '所以每年立春、清明、夏至、冬至，|在日历上几乎不挪窝。', 'So each term lands on nearly the same date every year.');
+  text('春节：2025 · 1/29　2026 · 2/17　2027 · 2/6', 540, 1086, { size: 30, color: MUTE, alpha: win(t, 27.6, 31) });
+  caption(t, 27.6, 31, '倒是春节，|每年都在变。', 'It is Spring Festival that moves around.');
+
+  // ⑤ 节气里的讲究
+  richText([['清明', RED], [' · 既是节气，也是节日', INK]], 540, TOP, { size: 52, weight: 900, alpha: win(t, 31.2, 34.8) });
+  caption(t, 31.2, 34.8, '清明，是唯一一个|既是节气、又是节日的日子。', 'Qingming is both a solar term and a festival.');
+  richText([['冬至', RED], [' · 大如年', INK]], 540, TOP, { size: 60, weight: 900, alpha: win(t, 34.8, 38.6) });
+  caption(t, 34.8, 38.6, '冬至大如年：北方吃饺子，|从这天起，开始「数九」。', 'Winter solstice: dumplings in the north, and the count of nines begins.');
+
+  // ⑥ 眼下：寒露
+  richText([['10 月 8 日', INK], [' · ', MUTE], ['寒露', RED]], 540, TOP, { size: 66, weight: 900, alpha: win(t, 38.8, 48.6) });
+  caption(t, 38.8, 42.6, '这几天，太阳正走到这里——|10 月 8 日，寒露。', 'Right now the sun reaches Cold Dew, on October 8.');
+  caption(t, 42.6, 46.4, '露水寒了，快要结霜。|早晚，该添衣服了。', 'The dew turns cold, frost is near. Time for warmer clothes.');
+
+  // ⑦ 非遗
+  const ua = win(t, 46.8, 52.6);
+  text('2016', 540, 560, { size: 120, weight: 700, alpha: ua });
+  text('联合国教科文组织', 540, 680, { size: 40, color: MUTE, alpha: ua * prog(t, 47, 47.6), spacing: 4 });
+  text('人类非物质文化遗产', 540, 760, { size: 56, weight: 900, color: RED, alpha: ua * prog(t, 47.4, 48), spacing: 6 });
+  caption(t, 46.6, 50, '2016 年，二十四节气|被列入人类非物质文化遗产。', 'In 2016, the 24 Solar Terms joined UNESCO\'s intangible heritage list.');
+  caption(t, 50, 52.6, '两千多年了，|它一直在提醒我们：该做什么了。', 'For two thousand years, it has told us what time it is.');
+
+  // ⑧ 收尾
+  const ea = prog(t, 52.4, 53.2);
+  wheel(t, ea, 1, { 16: 1, dim: .6 });
+  sun(16, ea);
+  text('二十四节气', 500, TOP - 30, { size: 76, weight: 900, alpha: ea, spacing: 10 });
+  seal('节令', 790, TOP - 36, 60, prog(t, 53, 53.6));
+  caption(t, 52.6, 58, '你那里，|今天冷了吗？', 'Is it getting cold where you are?');
+};
+
+// 节奏：开头节气歌放慢；提问停住倒数 5 秒
+scene(render, [
+  [0, 7.4, .8],
+  [7.4, 16.6], ['count', 5],
+  [16.6, 58],
+]);
+</script>
+</body></html>
