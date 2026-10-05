@@ -1,0 +1,73 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"Noto Serif SC";src:url(../vibe-kit/fonts/NotoSerifSC-900.ttf);font-weight:900}
+@font-face{font-family:"Noto Serif SC";src:url(../vibe-kit/fonts/NotoSerifSC-700.ttf);font-weight:700}
+html,body{margin:0;background:#000}
+svg{display:block}
+</style>
+</head><body>
+<!-- 一只握毛笔的狸花猫：扁平插画，粗描边。#avatar 1080×1080 头像，#banner 1125×633 主页背景 -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <g id="cat" stroke="#3a2e24" stroke-width="14" stroke-linejoin="round" stroke-linecap="round">
+      <!-- 尾巴 -->
+      <path d="M720 930 C 860 940, 900 820, 840 760 C 810 730, 790 760, 815 785 C 850 820, 820 890, 720 880 Z" fill="#a8916f"/>
+      <path d="M833 772 l 22 -8 M 852 812 l 24 2" fill="none" stroke-width="10"/>
+      <!-- 身子 -->
+      <path d="M380 960 C 340 820, 380 650, 540 640 C 700 650, 740 820, 700 960 Z" fill="#b49c80"/>
+      <ellipse cx="540" cy="860" rx="120" ry="110" fill="#f6efe2" stroke="none"/>
+      <path d="M400 800 l 34 10 M 395 850 l 36 6 M 680 800 l -34 10 M 685 850 l -36 6" fill="none" stroke-width="10"/>
+      <!-- 毛笔（在爪子后面）-->
+      <g transform="rotate(-38 540 760)">
+        <rect x="300" y="742" width="440" height="36" rx="12" fill="#9a6a3c"/>
+        <path d="M405 742 v36 M 520 742 v36 M 635 742 v36" stroke-width="7"/>
+        <rect x="738" y="736" width="26" height="48" rx="6" fill="#b8322a"/>
+        <path d="M764 760 C 800 760, 812 790, 800 820" fill="none" stroke="#b8322a" stroke-width="10"/>
+        <path d="M300 742 C 240 742, 190 752, 150 760 C 190 768, 240 778, 300 778 Z" fill="#1f1a16"/>
+        <rect x="290" y="736" width="22" height="48" rx="6" fill="#e6c48a"/>
+      </g>
+      <circle cx="270" cy="1000" r="16" fill="#1f1a16" stroke="none"/>
+      <!-- 头 -->
+      <path d="M300 300 L 330 160 L 450 250 Z" fill="#b49c80"/>
+      <path d="M780 300 L 750 160 L 630 250 Z" fill="#b49c80"/>
+      <path d="M335 215 L 345 260 L 395 250 Z M 745 215 L 735 260 L 685 250 Z" fill="#f0a9a0" stroke="none"/>
+      <path d="M540 230 C 760 230, 850 340, 840 470 C 830 600, 700 660, 540 660 C 380 660, 250 600, 240 470 C 230 340, 320 230, 540 230 Z" fill="#b49c80"/>
+      <!-- 额头的 M 纹和脸颊条纹 -->
+      <path d="M490 270 l 0 60 M 540 262 l 0 72 M 590 270 l 0 60" fill="none" stroke-width="12"/>
+      <path d="M252 450 l 50 6 M 258 500 l 46 -4 M 828 450 l -50 6 M 822 500 l -46 -4" fill="none" stroke-width="11"/>
+      <!-- 嘴边白毛 -->
+      <path d="M540 520 C 600 500, 680 530, 670 590 C 660 640, 590 640, 540 615 C 490 640, 420 640, 410 590 C 400 530, 480 500, 540 520 Z" fill="#f6efe2" stroke="none"/>
+      <!-- 眼睛 -->
+      <ellipse cx="430" cy="460" rx="46" ry="56" fill="#2a2420" stroke="none"/>
+      <ellipse cx="650" cy="460" rx="46" ry="56" fill="#2a2420" stroke="none"/>
+      <circle cx="446" cy="440" r="17" fill="#fff" stroke="none"/><circle cx="414" cy="482" r="7" fill="#fff" stroke="none"/>
+      <circle cx="666" cy="440" r="17" fill="#fff" stroke="none"/><circle cx="634" cy="482" r="7" fill="#fff" stroke="none"/>
+      <!-- 腮红、鼻子、嘴、胡子 -->
+      <ellipse cx="350" cy="560" rx="36" ry="20" fill="#f2a097" stroke="none" opacity=".75"/>
+      <ellipse cx="730" cy="560" rx="36" ry="20" fill="#f2a097" stroke="none" opacity=".75"/>
+      <path d="M522 540 L 558 540 L 540 560 Z" fill="#e48b84" stroke-width="8"/>
+      <path d="M540 562 C 540 590, 505 595, 495 578 M 540 562 C 540 590, 575 595, 585 578" fill="none" stroke-width="9"/>
+      <path d="M330 520 l -80 -14 M 330 545 l -82 8 M 750 520 l 80 -14 M 750 545 l 82 8" fill="none" stroke-width="6"/>
+      <!-- 两只爪子握住笔 -->
+      <ellipse cx="455" cy="790" rx="52" ry="42" fill="#b49c80"/>
+      <ellipse cx="610" cy="690" rx="52" ry="42" fill="#b49c80"/>
+      <path d="M440 815 v 14 M 465 818 v 14 M 596 715 v 14 M 621 718 v 14" fill="none" stroke-width="8"/>
+    </g>
+  </defs>
+</svg>
+
+<svg id="avatar" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <rect width="1080" height="1080" fill="#f1e6cf"/>
+  <circle cx="540" cy="560" r="430" fill="#e8d9bb"/>
+  <use href="#cat" transform="translate(30 20) scale(.95)"/>
+</svg>
+
+<svg id="banner" width="1125" height="633" viewBox="0 0 1125 633">
+  <rect width="1125" height="633" fill="#f1e6cf"/>
+  <circle cx="270" cy="330" r="250" fill="#e8d9bb"/>
+  <use href="#cat" transform="translate(-30 50) scale(.55)"/>
+  <text x="520" y="300" font-family="Noto Serif SC" font-weight="900" font-size="68" fill="#1b1712" letter-spacing="6">用代码，画中国</text>
+  <text x="524" y="372" font-family="Noto Serif SC" font-weight="700" font-size="30" fill="#6b5d4c" letter-spacing="3">老祖宗的学问，一笔一笔画给你看</text>
+</svg>
+</body></html>
