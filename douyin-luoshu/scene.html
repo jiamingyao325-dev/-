@@ -250,20 +250,25 @@ function render(t) {
   text('洛书里的 15', 272, 120, { size: 22, color: MUTE, align: 'left' });
   text('本视频由 AI 用代码生成', 996, 120, { size: 22, color: MUTE, align: 'right' });
 
-  // ① 0–4.6s 开门见山：一个方格，八条线全是 15
-  const hookA = 1 - prog(t, 4.0, 4.6);
+  // ① 0–4.8s 开门先抛问题：1 到 9 填进九宫格，横竖斜都相等？
+  const hookA = 1 - prog(t, 4.3, 4.8);
   if (hookA > 0) {
-    gridLines(G, prog(t, 0, .9), hookA, 'hk');
+    gridLines(G, prog(t, 0, .8), hookA, 'hk');
+    for (let n = 1; n <= 9; n++) {                                   // 一到九依次填进格子
+      const [r, c] = posOf(n), [x, y] = cell(r, c), k = prog(t, 1.9 + n * .09, 2.3 + n * .09);
+      ctx.save(); ctx.translate(x, y + 4); ctx.scale(.7 + .3 * k, .7 + .3 * k);
+      text(String(n), 0, 0, { size: 88, weight: 700, alpha: hookA * k }); ctx.restore();
+    }
     for (let i = 0; i < 8; i++) {
-      const ti = 1.2 + i * .28;
+      const ti = 2.9 + i * .17;
       redLine('H', i, prog(t, ti, ti + .25), hookA * .9);
       sumLabel(i, clamp((t - ti - .2) / .2) * hookA);
     }
-    numbers(G, prog(t, .1, .9), hookA);
-    text('15', 540, TOP, { size: 96, weight: 700, color: RED, alpha: hookA * prog(t, 1.2, 2) });
+    text('？', 540, TOP, { size: 110, weight: 900, color: RED, alpha: hookA * (1 - prog(t, 2.6, 2.9)) });
+    text('15', 540, TOP, { size: 96, weight: 700, color: RED, alpha: hookA * prog(t, 2.9, 3.4) });
   }
-  caption(t, 0, 2.2, '一个方格，九个数。', 'One square. Nine numbers.');
-  caption(t, 2.2, 4.4, '横、竖、斜，八条线，条条都是十五。', 'Across, down, corner to corner: every line is fifteen.');
+  caption(t, 0, 2.5, '把 1 到 9 填进九个格子，|让横、竖、斜加起来都一样？', 'Put 1 to 9 in nine cells so every line adds up the same?');
+  caption(t, 2.6, 4.7, '古人早就填出来了：|每一条，都是十五。', 'The ancients solved it: every line is fifteen.');
 
   // ② 4.6–14.6s 神龟、点阵、变成数字
   if (t > 4.6 && t < 12) drawDots(t, 4.9, prog(t, 9.4, 11));
