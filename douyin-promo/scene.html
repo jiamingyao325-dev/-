@@ -1,0 +1,99 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="../vibe-kit/ink.js"></script>
+<script>
+// 主号导流视频《我让 AI 做了个号》—— 全部画面由代码绘制。render(t) 画出第 t 秒的画面。
+const TOP = 330;
+const load = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.src = src; });
+const IMG = {};
+const imgsReady = Promise.all([
+  ['cat', '../douyin-profile/头像_猫.png'],
+  ['c1', '../发布包/01-半斤八两/竖封面_3比4.png'],
+  ['c2', '../发布包/02-二十四节气/竖封面_3比4.png'],
+  ['c3', '../发布包/03-九宫格/竖封面_3比4.png'],
+  ['c4', '../发布包/04-韩信点兵/竖封面_3比4.png'],
+].map(async ([k, s]) => IMG[k] = await load(s)));
+
+function avatar(x, y, r, a) {                                         // 圆形猫头像，带一圈描边
+  if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+  ctx.drawImage(IMG.cat, x - r, y - r, r * 2, r * 2); ctx.restore();
+  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = INK; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+}
+function card(img, x, y, w, a, rot = 0) {                             // 一张封面卡片，带阴影
+  if (a <= 0) return;
+  const h = w * 4 / 3;
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.rotate(rot);
+  ctx.shadowColor = 'rgba(40,30,20,.28)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12;
+  ctx.fillStyle = PAPER; ctx.fillRect(-w / 2, -h / 2, w, h);
+  ctx.shadowColor = 'transparent'; ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  ctx.strokeStyle = 'rgba(27,23,18,.35)'; ctx.lineWidth = 2; ctx.strokeRect(-w / 2, -h / 2, w, h);
+  ctx.restore();
+}
+function bubble(x, y, str, a) {                                        // 对话气泡
+  if (a <= 0) return;
+  ctx.save(); ctx.font = `700 46px ${SERIF}`; const w = ctx.measureText(str).width + 80; ctx.restore();
+  ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#fbf7ef'; ctx.strokeStyle = INK; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(x - w / 2, y - 55, w, 110, 40); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 30, y + 53); ctx.lineTo(x, y + 95); ctx.lineTo(x + 20, y + 53); ctx.fill(); ctx.stroke();
+  ctx.fillRect(x - 28, y + 46, 46, 10); ctx.restore();
+  text(str, x, y + 2, { size: 46, weight: 700, alpha: a });
+}
+
+const render = t => {
+  background(t, '我的 AI 小号', '一个晚上做了 4 条');
+
+  // ① 开场：猫头像
+  const pop = prog(t, 0, .6);
+  avatar(540, 640, 230 * (.8 + .2 * pop), win(t, -1, 8.8));
+  caption(t, 0, 4, '我在美国，|给 AI 开了个抖音号。', 'I gave an AI its own Douyin account.');
+  text('「要有逼格」', 540, TOP, { size: 76, weight: 900, color: RED, alpha: win(t, 4.2, 8.4), spacing: 6 });
+  caption(t, 4, 8.4, '我只交代了一句：|做中国传统文化，要有逼格。', 'One instruction: Chinese culture, with class.');
+
+  // ② 流水线
+  const pa = win(t, 8.2, 14.8);
+  const steps = ['选题', '写稿', '写代码画画面', '渲染出片'];
+  steps.forEach((s, i) => {
+    const y = 470 + i * 150, k = prog(t, 8.4 + i * .9, 8.9 + i * .9);
+    const w = s.length * 60 + 120;
+    ctx.save(); ctx.globalAlpha = pa * k; ctx.fillStyle = i === 3 ? RED : INK;
+    ctx.beginPath(); ctx.roundRect(540 - w / 2, y - 48, w, 96, 48); ctx.fill(); ctx.restore();
+    text(s, 540, y + 2, { size: 50, weight: 900, color: PAPER, alpha: pa * k, spacing: 4 });
+    if (i < 3) brush('ar' + i, 540, y + 52, 540, y + 98, prog(t, 8.8 + i * .9, 9.2 + i * .9), 5, INK, pa);
+  });
+  caption(t, 8.4, 14.2, '剩下的，全是它自己干：|选题、写稿、写代码、出片。', 'It did the rest itself: topics, scripts, code, rendering.');
+
+  // ③ 四张封面
+  const ca = win(t, 14.0, 21.9);
+  [['c1', 360, 520, -.05], ['c2', 720, 520, .04], ['c3', 360, 935, .03], ['c4', 720, 935, -.04]].forEach(([k, x, y, r], i) =>
+    card(IMG[k], x, y - (1 - prog(t, 14.1 + i * .3, 14.7 + i * .3)) * 40, 300, ca * prog(t, 14.1 + i * .3, 14.7 + i * .3), r));
+  caption(t, 14.2, 17.8, '一个晚上，|做了 4 条。', 'Four videos in one night.');
+  caption(t, 17.8, 21.4, '每一帧都是代码画的，|没有一张图是找来的。', 'Every frame drawn in code. No stock images.');
+
+  // ④ 第一条
+  const fa = win(t, 21.3, 27.9);
+  card(IMG.c1, 540, 700, 600 * (.92 + .08 * prog(t, 21.6, 22.4)), fa);
+  caption(t, 21.6, 27.4, '第一条：半斤为什么等于八两？|连美国，一磅也是十六盎司。', 'First up: why is half a jin eight liang?');
+
+  // ⑤ 它的吐槽
+  const ba = win(t, 27.3, 33.1);
+  avatar(540, 760, 200, ba);
+  bubble(540, 450, '老板，新号流量好差……', ba * prog(t, 28.2, 28.8));
+  caption(t, 27.6, 32.6, '然后它跟我说：', 'Then it told me:');
+
+  // ⑥ 求助
+  const ea = prog(t, 32.3, 33.0);
+  avatar(540, 700, 220, ea);
+  text('帮它一把', 540, TOP, { size: 84, weight: 900, alpha: ea, spacing: 12 });
+  caption(t, 32.8, 38, '它的号在评论区置顶，|去看看它画得怎么样。', 'Its account is pinned in the comments. Go take a look.');
+};
+
+scene(render, [[0, 38]]);
+window.ready = Promise.all([window.ready, imgsReady]).then(() => { window.render(0); return true; });
+</script>
+</body></html>
