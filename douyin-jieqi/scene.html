@@ -41,9 +41,9 @@ const render = t => {
   background(t, '二十四节气', '其实是阳历');
 
   // ① 节气歌
-  const sa = win(t, -1, 7.4);
+  const sa = win(t, -1, 7.8);
   ['春雨惊春清谷天', '夏满芒夏暑相连', '秋处露秋寒霜降', '冬雪雪冬小大寒'].forEach((l, i) =>
-    text(l, 540, 520 + i * 120, { size: 66, weight: 900, alpha: sa * prog(t, i * .7, .5 + i * .7), spacing: 14, color: SEASON(i * 6) }));
+    text(l, 540, 520 + i * 120, { size: 66, weight: 900, alpha: sa * Math.max(i === 0 ? .9 : 0, prog(t, i * .7, .5 + i * .7)), spacing: 14, color: SEASON(i * 6) }));
   caption(t, 0, 3.6, '这首歌，|你小时候一定背过。', 'You surely learned this rhyme as a child.');
   caption(t, 3.6, 7.4, '它一句七个字，|藏着一年的二十四个节气。', 'Seven characters a line, twenty-four solar terms in a year.');
 
@@ -53,7 +53,7 @@ const render = t => {
   if (t > 24 && t < 31) { hot.dim = win(t, 24, 31); [0, 4, 9, 21].forEach(i => hot[i] = win(t, 24.4, 31)); }
   if (t > 31 && t < 38.6) { hot.dim = win(t, 31, 38.6); hot[4] = win(t, 31, 34.8); hot[21] = win(t, 34.8, 38.6); }
   if (t > 38.6) { hot.dim = win(t, 38.6, 48.6); hot[16] = win(t, 41.2, 48.6); }
-  wheel(t, wa, prog(t, 7.4, 9.6), hot);
+  wheel(t, wa, prog(t, 7.1, 9.3), hot);
   const sunI = t < 10 ? 0 : t < 14.6 ? 24 * prog(t, 10, 14.4) : t < 41 ? 0 : 16 * prog(t, 41, 42.6);
   sun(sunI, wa * (t < 10 ? prog(t, 9.6, 10) : 1));
   caption(t, 7.4, 10.4, '一年二十四个，|大约半个月一个。', 'Twenty-four a year, about one every half month.');
@@ -90,7 +90,7 @@ const render = t => {
   caption(t, 42.6, 46.4, '露水寒了，快要结霜。|早晚，该添衣服了。', 'The dew turns cold, frost is near. Time for warmer clothes.');
 
   // ⑦ 非遗
-  const ua = win(t, 46.8, 52.6);
+  const ua = win(t, 46.8, 52.9);
   text('2016', 540, 560, { size: 120, weight: 700, alpha: ua });
   text('联合国教科文组织', 540, 680, { size: 40, color: MUTE, alpha: ua * prog(t, 47, 47.6), spacing: 4 });
   text('人类非物质文化遗产', 540, 760, { size: 56, weight: 900, color: RED, alpha: ua * prog(t, 47.4, 48), spacing: 6 });
@@ -98,7 +98,7 @@ const render = t => {
   caption(t, 50, 52.6, '两千多年了，|它一直在提醒我们：该做什么了。', 'For two thousand years, it has told us what time it is.');
 
   // ⑧ 收尾
-  const ea = prog(t, 52.4, 53.2);
+  const ea = prog(t, 52.1, 52.8);
   wheel(t, ea, 1, { 16: 1, dim: .6 });
   sun(16, ea);
   text('二十四节气', 500, TOP - 30, { size: 76, weight: 900, alpha: ea, spacing: 10 });
