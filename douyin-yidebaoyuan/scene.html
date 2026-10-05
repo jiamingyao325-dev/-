@@ -1,0 +1,115 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="../vibe-kit/ink.js"></script>
+<script src="strokes.js"></script>
+<script src="../vibe-kit/dark.js"></script>
+<script>
+// 《以德报怨》——「你只背过前半句」系列。全部画面由代码绘制，render(t) 画出第 t 秒的画面。
+const CY = 640, SY = 620, SLIP = { cx: 540, cy: SY, w: 84, h: 740, size: 52, pitch: 1.2 };
+
+// ---------- 时间轴（场景秒）：每段接在上一段后面 ----------
+// ① 挂轴上逐笔写出「以德报怨」
+const W1 = writing('以德报怨', { x: 540, y: CY - 1.5 * 170 * 1.1, size: 170, t0: .45, speed: 2.3, gain: 1 });
+const T1 = W1.end;
+// ③ 《道德经》竹简
+const A = T1 + 4.2;
+const LAO = bamboo('lao', ['', '', '為無為事無事味無味', '大小多少報怨以德', '圖難於其易為大於其細', '', ''], SLIP);
+const uLao = LAO.unroll(A + .3, A + 2.5, 0, 7);
+// ④ 而孔子，不同意
+const B = A + 5.6;
+sfx(B + .15, 'bell', { f: 196 });
+// ⑤ 《论语·宪问》竹简：先展开到问句
+const C = B + 3.6;
+const KONG = bamboo('kong', ['', '', '或曰以德報怨何如', '子曰何以報德', '以直報怨以德報德', '', ''], SLIP);
+const uKong1 = KONG.unroll(C + .4, C + 2.2, 0, 4);
+// ⑥ 那拿什么回报恩德呢？（停住倒数）
+const D = C + 6.6;
+// ⑦ 红字落下：以直報怨，以德報德
+const E = D + 4.0;
+const uKong2 = KONG.unroll(E + .1, E + 1.0, 4, 7);
+const RED_CH = [...'以直報怨以德報德'].map((ch, j) => {
+  const [x, y] = KONG.glyphAt(4, j);
+  return { w: writing(ch, { x, y, size: 52, t0: -99, sound: false }), t: E + 1.1 + j * .2 };
+});
+RED_CH.forEach(({ t }) => sfx(t, 'drop'));
+// ⑧ 直、德 画圈
+const F = E + 4.8;
+sfx(F + .3, 'brush', { dur: .5, gain: .7 }); sfx(F + 2.7, 'brush', { dur: .5, gain: .7 });
+// ⑨ 分寸
+const G = F + 5.2;
+const W2 = writing('分寸', { x: 540, y: CY - .5 * 230 * 1.1, size: 230, t0: G + .7, speed: 1.5 });
+// ⑩ 结尾：以直报怨 + 论语印
+const Hm = W2.end + 2.4;
+const W3 = writing('以直报怨', { x: 560, y: CY - 1.5 * 160 * 1.08, size: 160, gap: 1.08, t0: Hm + .6, speed: 2.4 });
+const S = W3.end + .5;
+sfx(S, 'stamp'); sfx(S + .05, 'bell', { f: 262, gain: .7 });
+const END = S + 5.2;
+
+const ringK = (t, a) => prog(t, a, a + .7);
+const render = t => {
+  background(t, '你只背过前半句', '以德报怨');
+
+  // ① ② 挂轴：以德报怨
+  const s1 = win(t, -1, A + .5, .9);
+  scroll(540, CY, 320, 880, s1);
+  W1.draw(t, s1);
+  caption(t, 1.5, T1 + .6, '这四个字，|你一定听过。', 'You have surely heard these four words.');
+  caption(t, T1 + .6, A, '都说，|这是教人宽宏大量。', 'Most say they teach magnanimity.');
+
+  // ③ 《道德经》
+  const s3 = win(t, A - .2, C + 1.3, .9) * lerp(1, .45, prog(t, B + .3, B + 1.3));
+  LAO.draw(t, s3, uLao(t));
+  const [lx, ly0] = LAO.glyphAt(3, 4), [, ly1] = LAO.glyphAt(3, 7);
+  ring('lao', lx, (ly0 + ly1) / 2, 58, (ly1 - ly0) / 2 + 46, ringK(t, A + 2.8), 6, CINNABAR, s3);
+  text('《道德经》· 第六十三章', 540, LAO.top - 52, { size: 30, color: DIM, alpha: s3 * prog(t, A + 1.6, A + 2.4), spacing: 4 });
+  caption(t, A + .4, B, '《道德经》里写着：|「报怨以德」。', 'The Tao Te Ching says: "Repay injury with virtue."');
+
+  // ④
+  caption(t, B, C, '而孔子，|不同意。', 'Confucius disagreed.');
+
+  // ⑨ ⑩ 的挂轴先铺在底下，竹简淡出时露出来
+  const s9 = win(t, G + .2, END + 2, .8);
+  scroll(540, CY, 360, 880, s9);
+
+  // ⑤ ⑥ ⑦ ⑧ 《论语·宪问》
+  const s5 = win(t, C - .3, G + .8, .8);
+  const u = t < E ? uKong1(t) : uKong2(t);
+  KONG.draw(t, s5, u, { skip: [4] });
+  text('《论语 · 宪问》', 540, KONG.top - 52, { size: 30, color: DIM, alpha: s5 * prog(t, C + 1.4, C + 2.2), spacing: 4 });
+  const [qx, qy0] = KONG.glyphAt(3, 2), [, qy1] = KONG.glyphAt(3, 5);
+  ring('q', qx, (qy0 + qy1) / 2, 58, (qy1 - qy0) / 2 + 46, ringK(t, C + 4.2), 6, CINNABAR, s5 * (1 - prog(t, E + .8, E + 1.4)));
+  RED_CH.forEach(({ w, t: tc }) => {
+    const k = clamp((t - tc) / .35);
+    if (k <= 0) return;
+    const [x, y] = w.centers[0];
+    ctx.save(); ctx.translate(x, y - (1 - ease(k)) * 26); const sc = 1 + (1 - ease(k)) * .5; ctx.scale(sc, sc); ctx.translate(-x, -y);
+    w.draw(t, s5 * clamp(k * 1.6), { color: CINNABAR, done: true });
+    ctx.restore();
+  });
+  const [zx, zy] = KONG.glyphAt(4, 1), [dx, dy] = KONG.glyphAt(4, 5);
+  ring('zhi', zx, zy, 46, 42, ringK(t, F + .3), 5, CINNABAR, s5);
+  ring('de', dx, dy, 46, 42, ringK(t, F + 2.7), 5, CINNABAR, s5);
+  caption(t, C + .4, D, '或曰：「以德报怨，何如？」|子曰：「何以报德？」', '"Then with what would you repay kindness?"');
+  caption(t, D, E, '以德报了怨，|那拿什么回报恩德呢？', 'If injury gets kindness, what is left for kindness?');
+  caption(t, E + .6, F, '以直报怨，|以德报德。', 'Repay injury with justice, and kindness with kindness.');
+  caption(t, F, G, '别人害你，用公道回应；|别人待你好，用恩德回报。', 'Meet harm with fairness; meet kindness with kindness.');
+
+  // ⑨ ⑩ 挂轴：分寸 → 以直报怨
+  W2.draw(t, s9 * (1 - prog(t, Hm - .2, Hm + .5)));
+  caption(t, G + .5, Hm, '这不是心软，|是分寸。', 'Not softness. A sense of measure.');
+  W3.draw(t, s9);
+  stamp('论语', 428, 962, 72, prog(t, S, S + .35) * s9);
+  caption(t, Hm + .7, END + 2, '下次再有人劝你以德报怨，|把孔子这句话告诉他。', 'Next time someone preaches "kindness for injury", tell them this.');
+};
+
+// 节奏：前半段放慢；孔子的反问处停住倒数 3 秒
+scene(render, [
+  [0, D + 3.6, .88],
+  ['count', 3],
+  [D + 3.6, END],
+]);
+</script>
+</body></html>
