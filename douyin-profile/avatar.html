@@ -1,0 +1,81 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="a" width="1080" height="1080"></canvas>
+<canvas id="b" width="1125" height="633"></canvas>
+<script>
+// 抖音头像（1080×1080）和主页背景图（1125×633）：墨童，一个拿毛笔的小书童
+const INK = '#1b1712', RED = '#b8322a', PAPER = '#efe8da', CHEEK = '#e59a8a', MUTE = '#7a6e60';
+function rng(s) { return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+function paper(c, w, h) {
+  const r = rng(7);
+  c.fillStyle = PAPER; c.fillRect(0, 0, w, h);
+  c.strokeStyle = '#8a7a62';
+  for (let i = 0; i < w * h / 1300; i++) {
+    const x = r() * w, y = r() * h, l = 10 + r() * 36, a = r() * Math.PI;
+    c.globalAlpha = .03 + r() * .04; c.lineWidth = .8;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke();
+  }
+  c.globalAlpha = 1;
+  const g = c.createRadialGradient(w / 2, h / 2, w * .1, w / 2, h / 2, w * .75);
+  g.addColorStop(0, 'rgba(255,250,238,.35)'); g.addColorStop(1, 'rgba(70,52,30,.18)');
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+}
+// 墨童：圆脸、两个发髻、一支毛笔
+function motong(c, x, y, s) {
+  c.save(); c.translate(x, y); c.scale(s, s);
+  c.fillStyle = INK;
+  for (const sx of [-1, 1]) {                                          // 发髻：头顶两侧的小圆髻，下面系红头绳
+    c.fillStyle = INK; c.beginPath(); c.arc(sx * 118, -228, 50, 0, Math.PI * 2); c.fill();
+    c.fillStyle = RED; c.beginPath(); c.roundRect(sx * 118 - 40, -192, 80, 20, 8); c.fill();
+    c.beginPath(); c.moveTo(sx * 118 + sx * 30, -178); c.quadraticCurveTo(sx * 190, -150, sx * 200, -110); c.lineTo(sx * 186, -108); c.quadraticCurveTo(sx * 170, -145, sx * 118 + sx * 20, -172); c.fill();
+  }
+  c.fillStyle = INK;
+  c.beginPath(); c.ellipse(0, 0, 230, 215, 0, 0, Math.PI * 2); c.fill();   // 脸（一团墨）
+  c.fillStyle = PAPER;                                                  // 刘海下的脸白
+  c.beginPath(); c.ellipse(0, 40, 175, 140, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = INK;                                                    // 刘海
+  c.beginPath(); c.moveTo(-180, -10); c.quadraticCurveTo(-90, -80, 0, -30); c.quadraticCurveTo(90, -80, 180, -10);
+  c.lineTo(180, -120); c.lineTo(-180, -120); c.closePath(); c.fill();
+  for (const sx of [-1, 1]) {                                           // 眼睛
+    c.fillStyle = INK; c.beginPath(); c.ellipse(sx * 68, 40, 24, 30, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = PAPER; c.beginPath(); c.arc(sx * 68 + 8, 30, 8, 0, Math.PI * 2); c.fill();
+    c.fillStyle = CHEEK; c.globalAlpha = .9; c.beginPath(); c.ellipse(sx * 118, 95, 30, 17, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
+  }
+  c.strokeStyle = INK; c.lineWidth = 9; c.lineCap = 'round';           // 笑
+  c.beginPath(); c.arc(0, 92, 24, Math.PI * .15, Math.PI * .85); c.stroke();
+  // 毛笔：斜插在右下
+  c.save(); c.translate(300, 70); c.rotate(.42);
+  c.fillStyle = '#7a4a2a'; c.fillRect(-14, -150, 28, 230);
+  c.fillStyle = RED; c.fillRect(-16, -160, 32, 18);
+  c.fillStyle = INK; c.beginPath(); c.moveTo(-18, 80); c.quadraticCurveTo(0, 175, 4, 190); c.quadraticCurveTo(14, 150, 18, 80); c.closePath(); c.fill();
+  c.restore();
+  c.restore();
+}
+function seal(c, x, y, s, chars) {
+  c.fillStyle = RED; c.beginPath(); c.roundRect(x - s / 2, y - s / 2, s, s, s * .1); c.fill();
+  c.fillStyle = PAPER; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `900 ${s * .4}px "Noto Serif SC"`;
+  c.fillText(chars[0], x, y - s * .2); c.fillText(chars[1], x, y + s * .22);
+}
+
+window.ready = (async () => {
+  for (const [w, f] of [['700', 'NotoSerifSC-700'], ['900', 'NotoSerifSC-900']])
+    document.fonts.add(await new FontFace('Noto Serif SC', `url(../vibe-kit/fonts/${f}.ttf)`, { weight: w }).load());
+  // 头像
+  const a = document.getElementById('a').getContext('2d');
+  paper(a, 1080, 1080);
+  motong(a, 520, 560, 1.3);
+  seal(a, 270, 830, 120, '墨童');
+  // 主页背景：左边墨童，右边口号
+  const b = document.getElementById('b').getContext('2d');
+  paper(b, 1125, 633);
+  motong(b, 260, 360, .62);
+  b.fillStyle = INK; b.textAlign = 'left'; b.textBaseline = 'middle';
+  b.font = '900 72px "Noto Serif SC"'; b.fillText('用代码，画中国', 470, 290);
+  b.font = '700 30px "Noto Serif SC"'; b.fillStyle = MUTE; b.fillText('老祖宗的学问 · 一笔一笔画给你看', 474, 380);
+  seal(b, 1010, 140, 80, '墨童');
+  return true;
+})();
+</script>
+</body></html>
