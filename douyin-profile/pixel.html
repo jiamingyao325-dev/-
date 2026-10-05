@@ -8,7 +8,7 @@
 // 像素风墨童：32×32 的像素格，逐格上色后按整数倍放大（不抗锯齿）
 // 头像 1080×1080；主页背景 1125×633
 const P = {
-  bg: '#f1e6cf', sun: '#c8402f', ink: '#1b1712', skin: '#f6dcc0', skin2: '#e9c3a0', cheek: '#ef8f7e',
+  bg: '#f1e6cf', sun: (new URLSearchParams(location.search).get('m') || 'kid') === 'kid' ? '#c8402f' : '#e9c46a', ink: '#1b1712', skin: '#f6dcc0', skin2: '#e9c3a0', cheek: '#ef8f7e',
   white: '#fffaf0', robe: '#3f6d78', robe2: '#2e525b', gold: '#e6b450', wood: '#8a5a32', red: '#b8322a',
 };
 const N = 32;
@@ -52,6 +52,57 @@ function sprite() {
   set(22, 24, P.skin); set(23, 24, P.skin); set(22, 25, P.skin); set(23, 25, P.skin);   // 手
   return g;
 }
+
+// ---------- 动物方案 ----------
+function grid() { const g = Array.from({ length: N }, () => Array(N).fill(null));
+  const set = (x, y, c) => { if (x >= 0 && y >= 0 && x < N && y < N) g[y][x] = c; };
+  const circle = (cx, cy, r, c, cond = () => true) => { for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (Math.hypot(x + .5 - cx, y + .5 - cy) <= r && cond(x, y)) set(x, y, c); };
+  const ell = (cx, cy, rx, ry, c, cond = () => true) => { for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (((x + .5 - cx) / rx) ** 2 + ((y + .5 - cy) / ry) ** 2 <= 1 && cond(x, y)) set(x, y, c); };
+  return { g, set, circle, ell }; }
+// 墨鱼：粉色身子、尖顶带鳍、大眼睛、六条触手，一条握毛笔，身后一滴墨
+function squid() {
+  const { g, set, ell } = grid(), B = '#f2a6a0', D = '#d97f7c', L = '#fbd3cc';
+  for (let y = 3; y < 9; y++) { const h = (y - 3) * .9; for (let x = 0; x < N; x++) if (Math.abs(x + .5 - 16) <= h) set(x, y, B); }  // 尖顶
+  ell(16, 14, 8.5, 7.5, B);                                                                          // 身子
+  for (const sx of [-1, 1]) for (let y = 7; y < 12; y++) for (let k = 0; k < 12 - y; k++) set(16 + sx * (8 + k), y + 1, D);       // 两侧鳍
+  ell(13, 10, 2, 1.4, L);                                                                             // 高光
+  for (let i = 0; i < 6; i++) {                                                                       // 触手
+    const x0 = 9 + i * 2.6, wav = i % 2 ? 1 : -1;
+    for (let y = 20; y < 29; y++) { const x = Math.round(x0 + Math.sin((y - 20) / 2.2) * wav); set(x, y, B); set(x + 1, y, y > 26 ? D : B); }
+  }
+  for (let x = 8; x < 25; x++) set(x, 20, D);
+  for (const ex of [11, 18]) { for (let y = 12; y < 16; y++) for (let x = ex; x < ex + 3; x++) set(x, y, P.ink); set(ex, 12, P.white); set(ex + 1, 12, P.white); set(ex, 13, P.white); }
+  set(10, 17, P.cheek); set(11, 17, P.cheek); set(21, 17, P.cheek); set(22, 17, P.cheek);
+  set(15, 17, P.ink); set(16, 18, P.ink); set(17, 17, P.ink);
+  for (let i = 0; i < 10; i++) set(26 + Math.floor(i * .3), 15 + i, P.wood);                          // 毛笔
+  set(26, 14, P.red); set(26, 13, P.red); set(29, 25, P.ink); set(29, 26, P.ink); set(30, 27, P.ink);
+  set(24, 22, B); set(25, 22, B); set(25, 21, B); set(26, 21, B);                                     // 触手卷住笔
+  for (const [x, y] of [[4, 24], [4, 25], [5, 25], [3, 26], [4, 26], [5, 26], [4, 27]]) set(x, y, P.ink);   // 一滴墨
+  return g;
+}
+// 狸花猫：灰褐虎斑、绿眼、红围巾、握毛笔
+function cat() {
+  const { g, set, circle, ell } = grid(), F = '#a8937a', S = '#5e4b3a', W = '#efe4d2', E = '#6fae5b';
+  for (const sx of [-1, 1]) for (let y = 3; y < 10; y++) for (let x = 0; x < N; x++) {           // 耳朵
+    const cx = 16 + sx * 7, half = (y - 3) * .6; if (Math.abs(x + .5 - cx) <= half) set(x, y, F);
+    if (Math.abs(x + .5 - cx) <= half - 1.3 && y > 5) set(x, y, '#e8a59a');
+  }
+  ell(16, 15, 10, 8, F);                                                                           // 头
+  ell(16, 26, 9, 6, F, (x, y) => y >= 22);                                                        // 身子
+  ell(16, 19, 5, 3.2, W);                                                                          // 嘴边白毛
+  for (const [x, y] of [[15, 8], [16, 8], [15, 9], [16, 9], [13, 9], [18, 9], [12, 10], [19, 10], [8, 14], [9, 14], [23, 14], [24, 14], [7, 16], [8, 16], [24, 16], [25, 16]]) set(x, y, S);  // 虎斑
+  for (const ex of [11, 19]) { for (let y = 13; y < 16; y++) for (let x = ex; x < ex + 3; x++) set(x, y, E); for (let y = 13; y < 16; y++) set(ex + 1, y, P.ink); set(ex, 13, P.white); }
+  set(15, 17, '#d9867c'); set(16, 17, '#d9867c'); set(15, 18, P.ink); set(16, 19, P.ink); set(17, 18, P.ink); set(14, 19, P.ink);
+  set(10, 18, P.cheek); set(21, 18, P.cheek);
+  for (let x = 8; x < 25; x++) { set(x, 22, P.red); set(x, 23, P.red); }                          // 红围巾
+  set(10, 24, P.red); set(11, 24, P.red); set(10, 25, P.red); set(11, 26, P.red);
+  for (const [x, y] of [[13, 26], [14, 27], [18, 26], [19, 27]]) set(x, y, S);
+  for (let i = 0; i < 11; i++) set(27 - Math.floor(i * .4), 14 + i, P.wood);                      // 毛笔
+  set(27, 13, P.red); set(27, 12, P.red); set(22, 25, P.ink); set(23, 25, P.ink); set(22, 26, P.ink);
+  circle(24.5, 24.5, 1.6, W);                                                                      // 爪子
+  return g;
+}
+
 function drawSprite(c, g, x0, y0, s) {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++)
     if (g[y][x]) { c.fillStyle = g[y][x]; c.fillRect(x0 + x * s, y0 + y * s, s, s); }
@@ -75,7 +126,7 @@ function pixelText(c, str, x, y, px, scale, color) {
 
 window.ready = (async () => {
   document.fonts.add(await new FontFace('Noto Sans SC', 'url(../vibe-kit/fonts/NotoSansSC-700.ttf)', { weight: '700' }).load());
-  const g = sprite();
+  const g = { squid, cat, kid: sprite }[new URLSearchParams(location.search).get('m') || 'kid']();
   const a = document.getElementById('a').getContext('2d');
   a.fillStyle = P.bg; a.fillRect(0, 0, 1080, 1080);
   pixelSun(a, 540, 470, 13, 32);
