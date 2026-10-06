@@ -1,0 +1,107 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="../vibe-kit/ink.js"></script>
+<script>
+// 《不管三七二十一》—— 全部画面由代码绘制。render(t) 画出第 t 秒的画面。
+const TOP = 330;
+
+// 一座城：城墙方框 + 四门 + 里面一格格的屋顶
+function city(t, a, t0) {
+  if (a <= 0) return;
+  const cx = 540, cy = 690, w = 640, h = 520;
+  const k = prog(t, t0, t0 + 1.4);
+  brush('w1', cx - w / 2, cy - h / 2, cx + w / 2, cy - h / 2, k, 10, INK, a);
+  brush('w2', cx + w / 2, cy - h / 2, cx + w / 2, cy + h / 2, clamp(k * 1.3 - .1), 10, INK, a);
+  brush('w3', cx + w / 2, cy + h / 2, cx - w / 2, cy + h / 2, clamp(k * 1.6 - .3), 10, INK, a);
+  brush('w4', cx - w / 2, cy + h / 2, cx - w / 2, cy - h / 2, clamp(k * 2 - .6), 10, INK, a);
+  // 城门楼
+  for (const [x, y] of [[cx, cy - h / 2], [cx, cy + h / 2]]) {
+    ctx.save(); ctx.globalAlpha = a * prog(t, t0 + 1, t0 + 1.6); ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.moveTo(x - 70, y - 18); ctx.lineTo(x + 70, y - 18); ctx.lineTo(x + 50, y - 50); ctx.lineTo(x - 50, y - 50); ctx.closePath(); ctx.fill();
+    ctx.fillRect(x - 40, y - 18, 80, 30); ctx.restore();
+  }
+  // 屋顶：7 行 × 10 列小屋，一个代表一千户
+  for (let r = 0; r < 7; r++) for (let c = 0; c < 10; c++) {
+    const i = r * 10 + c, kk = prog(t, t0 + 1.4 + i * .025, t0 + 1.7 + i * .025);
+    if (kk <= 0) continue;
+    const x = cx - 252 + c * 56, y = cy - 190 + r * 62;
+    ctx.save(); ctx.globalAlpha = a * kk; ctx.fillStyle = RED;
+    ctx.beginPath(); ctx.moveTo(x - 20, y); ctx.lineTo(x, y - 16); ctx.lineTo(x + 20, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = INK; ctx.fillRect(x - 14, y, 28, 18); ctx.restore();
+  }
+}
+// 从每户走出三个人：一排排小人
+function soldiers(t, a, t0) {
+  if (a <= 0) return;
+  for (let r = 0; r < 7; r++) for (let c = 0; c < 30; c++) {
+    const i = r * 30 + c, k = prog(t, t0 + i * .008, t0 + .4 + i * .008);
+    if (k <= 0) continue;
+    const x = 540 - 29 * 14 + c * 28, y = 520 + r * 62;
+    ctx.save(); ctx.globalAlpha = a * k; ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.arc(x, y - 16, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(x - 5, y - 9, 10, 20); ctx.restore();
+  }
+}
+
+const render = t => {
+  background(t, '不管三七二十一', '一句俗语的出处');
+
+  // ① 开场
+  text('不管三七二十一', 540, 640, { size: 100, weight: 900, alpha: win(t, -1, 6.6), spacing: 6 });
+  caption(t, 0, 3.4, '「不管三七二十一」，|这句话你一定说过。', 'You have surely said it: "never mind three sevens are twenty-one."');
+  caption(t, 3.4, 6.6, '可「三七二十一」，|到底在算什么？', 'But what exactly was being counted?');
+
+  // ② 战国，苏秦
+  const ha = win(t, 6.6, 12.4);
+  text('战国', 540, 520, { size: 110, weight: 900, alpha: ha, spacing: 20 });
+  text('苏秦 · 游说齐宣王', 540, 660, { size: 48, weight: 700, color: RED, alpha: ha * prog(t, 7.4, 8), spacing: 6 });
+  text('《战国策 · 齐策一》', 540, 760, { size: 36, color: MUTE, alpha: ha * prog(t, 8, 8.6), spacing: 4 });
+  caption(t, 6.6, 9.6, '两千多年前，战国。|说客苏秦来到齐国。', 'Over two thousand years ago, the strategist Su Qin came to Qi.');
+  caption(t, 9.6, 12.4, '他要劝齐王：|齐国的兵，多得很。', 'He wanted to convince the king: Qi had soldiers to spare.');
+
+  // ③ 临淄城：七万户
+  const ca = win(t, 12.4, 19.6);
+  city(t, ca, 12.6);
+  text('临淄 · 七万户', 540, TOP, { size: 64, weight: 900, alpha: win(t, 12.8, 19.6), spacing: 6 });
+  caption(t, 12.4, 16, '他说：齐国的都城临淄，|有七万户人家。', 'The capital Linzi, he said, had seventy thousand households.');
+  caption(t, 16, 19.6, '我估摸着，|每户至少出三个男丁。', 'Each, he reckoned, could send at least three men.');
+
+  // ④ 三七二十一万
+  const sa = win(t, 19.8, 27.6);
+  soldiers(t, sa, 20);
+  richText([['3 × 7 万 = ', INK], ['21 万', RED]], 540, TOP, { size: 72, weight: 900, alpha: win(t, 20.2, 27.6) });
+  text('三七二十一万', 540, 1000, { size: 72, weight: 900, color: RED, alpha: sa * prog(t, 22.6, 23.4), spacing: 10 });
+  caption(t, 19.8, 23.6, '三七二十一万。|不用去外地调兵，', 'Three times seventy thousand: two hundred and ten thousand.');
+  caption(t, 23.6, 27.6, '光临淄一城，|就有二十一万大军。', 'An army from one city alone, without calling on the provinces.');
+
+  // ⑤ 原文
+  const qa = win(t, 27.8, 34);
+  ['临淄之中七万户，', '臣窃度之，下户三男子，', '三七二十一万。'].forEach((l, i) =>
+    text(l, 540, 520 + i * 100, { size: 54, weight: 700, alpha: qa * prog(t, 28 + i * .5, 28.6 + i * .5), spacing: 6, color: i === 2 ? RED : INK }));
+  text('——《战国策 · 齐策一》', 760, 840, { size: 32, color: MUTE, alpha: qa * prog(t, 29.6, 30.2) });
+  caption(t, 27.8, 34, '原话就记在《战国策》里。', 'His words are recorded in the Strategies of the Warring States.');
+
+  // ⑥ 后来的意思
+  const ma = win(t, 34.2, 41.4);
+  richText([['不管', MUTE], ['三七二十一', RED]], 540, 640, { size: 90, weight: 900, alpha: ma, spacing: 6 });
+  text('= 不顾一切，先干再说', 540, 780, { size: 46, weight: 700, alpha: ma * prog(t, 35.6, 36.2) });
+  caption(t, 34.2, 37.8, '可这笔账，|其实算得很粗。', 'But the arithmetic was rough.');
+  caption(t, 37.8, 41.4, '据说后来人就用它来说：|不细算了，先干再说。', 'Later it came to mean: forget the details, just go.');
+
+  // ⑦ 收尾
+  const ea = prog(t, 41.4, 42.2);
+  text('不管三七二十一', 540, TOP - 10, { size: 76, weight: 900, alpha: ea, spacing: 6 });
+  seal('战国', 540, 560, 120, prog(t, 42, 42.6));
+  caption(t, 41.6, 47, '你嘴边的一句俗话，|是两千年前的一笔账。', 'A phrase on your lips, from a sum done two thousand years ago.');
+};
+
+// 节奏：开头放慢；问题处停住倒数 3 秒
+scene(render, [
+  [0, 5.6, .85], ['count', 3],
+  [5.6, 47],
+]);
+</script>
+</body></html>
