@@ -105,13 +105,13 @@ const render = t => {
   background(t, '九九重阳', '为什么是九');
 
   // ① 开场：3D 菊花酒
-  layer3d(t, Math.max(win(t, -1, 9.4, .6), win(t, 22.2, 34.6, .6), prog(t, 51.6, 52.4)));
+  layer3d(t, Math.max(win(t, -1, 9.4, .6), win(t, 21.8, 35.0, .6), prog(t, 51.6, 52.4)));
   text('九月初九', 540, TOP, { size: 84, weight: 900, alpha: win(t, -1, 9.2), spacing: 16 });
   caption(t, 0, 4.4, '农历九月初九，|重阳节。', 'The ninth day of the ninth month: the Double Ninth Festival.');
   caption(t, 4.4, 9.2, '可为什么偏偏是「九」？|又为什么叫「重阳」？', 'But why nine? And why "double yang"?');
 
   // ② 两个九相重
-  const na = win(t, 9, 15.6);
+  const na = win(t, 9, 15.9);
   const m = prog(t, 9.4, 10.4);
   text('九', lerp(300, 410, m), 640, { size: 230, weight: 900, alpha: na });
   text('九', lerp(780, 670, m), 640, { size: 230, weight: 900, alpha: na, color: RED });
@@ -120,8 +120,8 @@ const render = t => {
   caption(t, 12.4, 15.6, '九月九日，两个九相重——|所以叫「重阳」。', 'Ninth month, ninth day: yang doubled.');
 
   // ③ 曹丕的信
-  const qa = win(t, 15.4, 22.4);
-  scroll(['九为阳数', '而日月并应', '俗嘉其名', '以为宜于长久'], 540, 400, qa, { t, t0: 15.6, red: j => j === 3 });
+  const qa = win(t, 15.0, 22.6);
+  scroll(['九为阳数', '而日月并应', '俗嘉其名', '以为宜于长久'], 540, 400, qa, { t, t0: 15.1, red: j => j === 3 });
   text('三国 · 曹丕《九日与钟繇书》', 540, 1080, { size: 32, color: MUTE, alpha: qa * prog(t, 16.6, 17.2), spacing: 2 });
   caption(t, 15.6, 19, '三国时，曹丕在信里写：|日和月都逢九，人们喜欢这名字，', 'Cao Pi wrote: day and month both meet nine, and people love the name,');
   caption(t, 19, 22.4, '觉得它「宜于长久」。|九，就是久。', '"fit for things that last." Nine sounds like "long-lasting."');
@@ -137,8 +137,8 @@ const render = t => {
   caption(t, 28.4, 34.4, '红的是茱萸，古人说能辟邪；|黄的是菊花，又叫「延寿客」。', 'Red dogwood wards off evil; the chrysanthemum is called the guest of long life.');
 
   // ⑤ 王维
-  const pa = win(t, 34.4, 46.4);
-  scroll(['独在异乡为异客', '每逢佳节倍思亲', '遥知兄弟登高处', '遍插茱萸少一人'], 540, 380, pa, { t, t0: 35, size: 50, red: j => j === 1 });
+  const pa = win(t, 34.2, 46.4);
+  scroll(['独在异乡为异客', '每逢佳节倍思亲', '遥知兄弟登高处', '遍插茱萸少一人'], 540, 380, pa, { t, t0: 34.4, size: 50, red: j => j === 1 });
   text('唐 · 王维《九月九日忆山东兄弟》 时年十七', 540, 1080, { size: 30, color: MUTE, alpha: pa * prog(t, 36, 36.6), spacing: 1 });
   caption(t, 34.6, 38.6, '唐朝，十七岁的王维|一个人在长安过重阳。', 'In the Tang dynasty, seventeen-year-old Wang Wei spent the festival alone.');
   caption(t, 38.6, 42.6, '他想到家乡的兄弟们登高，|每人插一枝茱萸，', 'He pictured his brothers climbing the hills, each wearing dogwood,');
