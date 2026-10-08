@@ -1,0 +1,114 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="../vibe-kit/ink.js"></script>
+<script>
+// 《老鼠凭什么排生肖第一》—— 全部画面由代码绘制。render(t) 画出第 t 秒的画面。
+const TOP = 330;
+const SHENG = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
+const ZHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+const HOURS = ['23–1', '1–3', '3–5', '5–7', '7–9', '9–11', '11–13', '13–15', '15–17', '17–19', '19–21', '21–23'];
+const C = { x: 540, y: 760 };
+let CAT = null;
+const catReady = new Promise(ok => { const i = new Image(); i.onload = () => { CAT = i; ok(); }; i.src = '../douyin-profile/头像_猫.png'; });
+
+// 一枚圆形字章：动物用字代替，干净有逼格
+function token(ch, x, y, r, a, red = false) {
+  if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = red ? RED : INK;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  text(ch, x, y + r * .05, { size: r * 1.1, weight: 900, color: PAPER, alpha: a });
+}
+// 十二生肖环
+function zodiacRing(t, a, drawK, hot = -1, sub = null) {
+  if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha = a * .7; ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(C.x, C.y, 200, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * drawK); ctx.stroke(); ctx.restore();
+  SHENG.forEach((s, i) => {
+    const k = clamp(drawK * 12 - i); if (k <= 0) return;
+    const ang = -Math.PI / 2 + i * Math.PI / 6, x = C.x + Math.cos(ang) * 290, y = C.y + Math.sin(ang) * 290;
+    token(s, x, y, i === hot ? 52 : 40, a * k * (hot >= 0 && i !== hot ? .45 : 1), i === hot);
+    if (sub) text(sub[i], C.x + Math.cos(ang) * 175, C.y + Math.sin(ang) * 175, { size: 26, color: i === hot ? RED : MUTE, alpha: a * k });
+  });
+}
+// 渡河：水波 + 牛驮着鼠，最后鼠一跳
+function river(t, a, t0) {
+  if (a <= 0) return;
+  for (let r = 0; r < 4; r++) {
+    ctx.save(); ctx.globalAlpha = a * .5; ctx.strokeStyle = '#5b7a8a'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let x = 80; x <= 1000; x += 10) ctx.lineTo(x, 760 + r * 50 + Math.sin(x / 40 + t * 2 + r) * 8);
+    ctx.stroke(); ctx.restore();
+  }
+  brush('bank', 900, 600, 900, 980, prog(t, t0, t0 + .8), 8, INK, a);      // 终点岸
+  text('终点', 960, 560, { size: 34, weight: 700, color: RED, alpha: a * prog(t, t0 + .4, t0 + 1) });
+  const k = prog(t, t0 + .6, t0 + 6), ox = lerp(160, 820, k), oy = 790 + Math.sin(t * 3) * 6;
+  token('牛', ox, oy, 62, a);
+  const jump = prog(t, t0 + 6, t0 + 7.2), mx = lerp(ox, 960, jump), my = lerp(oy - 92, 690, jump) - Math.sin(jump * Math.PI) * 160;
+  token('鼠', mx, my, 34, a, jump > .95);
+  if (jump > .98) text('第一', 960, 640, { size: 40, weight: 900, color: RED, alpha: a * prog(t, t0 + 7.2, t0 + 7.6) });
+}
+function cat(x, y, s, a) {
+  if (a <= 0 || !CAT) return;
+  ctx.save(); ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(x, y, s / 2, 0, Math.PI * 2); ctx.clip();
+  ctx.drawImage(CAT, x - s / 2, y - s / 2, s, s); ctx.restore();
+}
+
+const render = t => {
+  background(t, '老鼠凭什么排第一', '生肖系列');
+
+  // ① 提问
+  zodiacRing(t, win(t, -1, 7.4), prog(t, 0, 1.6), t > 2 ? 0 : -1);
+  text('鼠 ？', 540, TOP, { size: 96, weight: 900, color: RED, alpha: win(t, 1.6, 7.4), spacing: 10 });
+  caption(t, 0, 3.6, '十二生肖，|老鼠排第一。', 'Of the twelve zodiac animals, the rat comes first.');
+  caption(t, 3.6, 7.4, '又小又不起眼，|它凭什么？', 'Small and unremarkable. Why does it lead?');
+
+  // ② 传说：渡河
+  const ra = win(t, 7.2, 17.8);
+  river(t, ra, 7.4);
+  caption(t, 7.4, 10.8, '传说玉帝要选十二种动物，|让它们比赛渡河。', 'Legend says the Jade Emperor held a river race to pick twelve animals.');
+  caption(t, 10.8, 14.2, '老牛最勤快，天不亮就出发，|没发现背上趴着一只老鼠。', 'The diligent ox left before dawn, not noticing a rat on its back.');
+  caption(t, 14.2, 17.8, '快到岸时，老鼠一跳——|第一。', 'Just before the bank, the rat leapt off. First place.');
+
+  // ③ 猫呢
+  const ka = win(t, 17.6, 25);
+  cat(540, 660, 460, ka);
+  for (let i = 0; i < 3; i++) { const p = ((t * .6) + i / 3) % 1; text('z', 790 + p * 70, 520 - p * 120, { size: 50 + i * 8, weight: 900, color: MUTE, alpha: ka * (1 - p) }); }
+  text('猫呢？', 540, TOP, { size: 84, weight: 900, alpha: win(t, 17.8, 25), spacing: 8 });
+  caption(t, 17.8, 21.4, '猫呢？传说老鼠答应叫醒它，|却没叫。', 'And the cat? The rat promised to wake it, and did not.');
+  caption(t, 21.4, 25, '猫睡过了头，落选了，|从此见鼠就抓。', 'The cat overslept, missed out, and has chased rats ever since.');
+
+  // ④ 真正的讲究：子时
+  const za = win(t, 24.8, 33.2);
+  zodiacRing(t, za, 1, 0, HOURS);
+  text('子时 · 23 点到 1 点', 540, TOP, { size: 58, weight: 900, alpha: za, spacing: 4 });
+  caption(t, 25, 29, '其实古人用十二地支计时，|子时，是一天的开头。', 'In fact, the twelve branches marked the hours. Zi opens the day.');
+  caption(t, 29, 33.2, '夜里十一点到一点，|正是老鼠最活跃的时候。', 'From eleven at night to one, the rat is at its busiest.');
+
+  // ⑤ 更玄的说法
+  const la = win(t, 33.2, 41.4);
+  text('明 · 郎瑛《七修类稿》', 540, 470, { size: 36, color: MUTE, alpha: la, spacing: 4 });
+  richText([['前足 ', INK], ['四', RED], [' 趾 · 后足 ', INK], ['五', RED], [' 趾', INK]], 540, 600, { size: 62, weight: 900, alpha: la * prog(t, 33.6, 34.2) });
+  richText([['一偶一奇 · ', INK], ['阴阳交界', RED]], 540, 720, { size: 62, weight: 900, alpha: la * prog(t, 35.4, 36) });
+  caption(t, 33.2, 37.2, '明朝人还有个更玄的说法：|老鼠前脚四趾，后脚五趾。', 'A Ming scholar noted: four toes in front, five behind.');
+  caption(t, 37.2, 41.4, '一偶一奇，一阴一阳，|正配子时：昨天和今天的交界。', 'Even and odd, yin and yang: just right for the hour where days meet.');
+
+  // ⑥ 收尾
+  const ea = prog(t, 41.2, 42);
+  zodiacRing(t, ea, 1, 0);
+  token('鼠', C.x, C.y, 90 * ea, ea, true);
+  text('老鼠凭什么排第一', 500, TOP - 30, { size: 66, weight: 900, alpha: ea, spacing: 4 });
+  seal('生肖', 860, TOP - 34, 60, prog(t, 41.8, 42.4));
+  caption(t, 41.4, 47, '它占的，是一天的开头。|你属什么？评论区报个到。', 'It holds the very start of the day. What is your animal?');
+};
+
+// 节奏：开头放慢；提问处停住倒数 3 秒
+scene(render, [
+  [0, 6, .85], ['count', 3, 860, 330],
+  [6, 47],
+]);
+window.ready = Promise.all([window.ready, catReady]).then(() => { window.render(0); return true; });
+</script>
+</body></html>
