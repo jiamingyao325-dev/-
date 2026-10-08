@@ -81,22 +81,22 @@ const render = t => {
   caption(t, 21.4, 25, '猫睡过了头，落选了，|从此见鼠就抓。', 'The cat overslept, missed out, and has chased rats ever since.');
 
   // ④ 真正的讲究：子时
-  const za = win(t, 24.8, 33.2);
+  const za = win(t, 24.8, 33.6);
   zodiacRing(t, za, 1, 0, HOURS);
   text('子时 · 23 点到 1 点', 540, TOP, { size: 58, weight: 900, alpha: za, spacing: 4 });
   caption(t, 25, 29, '其实古人用十二地支计时，|子时，是一天的开头。', 'In fact, the twelve branches marked the hours. Zi opens the day.');
   caption(t, 29, 33.2, '夜里十一点到一点，|正是老鼠最活跃的时候。', 'From eleven at night to one, the rat is at its busiest.');
 
   // ⑤ 更玄的说法
-  const la = win(t, 33.2, 41.4);
+  const la = win(t, 33.0, 41.8);
   text('明 · 郎瑛《七修类稿》', 540, 470, { size: 36, color: MUTE, alpha: la, spacing: 4 });
-  richText([['前足 ', INK], ['四', RED], [' 趾 · 后足 ', INK], ['五', RED], [' 趾', INK]], 540, 600, { size: 62, weight: 900, alpha: la * prog(t, 33.6, 34.2) });
+  richText([['前足 ', INK], ['四', RED], [' 趾 · 后足 ', INK], ['五', RED], [' 趾', INK]], 540, 600, { size: 62, weight: 900, alpha: la * prog(t, 33.1, 33.7) });
   richText([['一偶一奇 · ', INK], ['阴阳交界', RED]], 540, 720, { size: 62, weight: 900, alpha: la * prog(t, 35.4, 36) });
   caption(t, 33.2, 37.2, '明朝人还有个更玄的说法：|老鼠前脚四趾，后脚五趾。', 'A Ming scholar noted: four toes in front, five behind.');
   caption(t, 37.2, 41.4, '一偶一奇，一阴一阳，|正配子时：昨天和今天的交界。', 'Even and odd, yin and yang: just right for the hour where days meet.');
 
   // ⑥ 收尾
-  const ea = prog(t, 41.2, 42);
+  const ea = prog(t, 40.9, 41.5);
   zodiacRing(t, ea, 1, 0);
   token('鼠', C.x, C.y, 90 * ea, ea, true);
   text('老鼠凭什么排第一', 500, TOP - 30, { size: 66, weight: 900, alpha: ea, spacing: 4 });
