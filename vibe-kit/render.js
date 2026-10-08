@@ -19,6 +19,7 @@ async function openScene() {
   const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--allow-file-access-from-files'] });
   const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
   await page.goto('file://' + path.join(DIR, 'scene.html'));
+  await page.waitForFunction(() => window.ready, null, { timeout: 180000 });   // 模块脚本（3D）晚一点才设好 ready
   await page.evaluate(() => window.ready);
   return { browser, page, canvas: await page.$('canvas') };
 }
@@ -62,6 +63,7 @@ async function renderSegment(from, to, file, onFrame) {
 
   const { browser, page } = await openScene();
   const frames = Math.round(await page.evaluate(() => window.DURATION) * FPS);
+  const { sfx, duck } = await page.evaluate(() => ({ sfx: window.SFX || [], duck: window.DUCK || [] }));
   await browser.close();
 
   const workers = Number(arg('--workers')) || os.cpus().length;
@@ -94,6 +96,16 @@ async function renderSegment(from, to, file, onFrame) {
       ? ['-filter_complex', `[1:a]atrim=0:${dur},${fade}[a]`, '-map', '[a]']
       : ['-filter_complex', `[1:a]atrim=0:${X},asetpts=N/SR/TB[x];[1:a]atrim=${X - E}:${len},asetpts=N/SR/TB[y];[x][y]acrossfade=d=1.5,apad,atrim=0:${dur},${fade}[a]`, '-map', '[a]'];
   }
+  // 音效与压低：DUCK 段内配乐降到给定音量；SFX 混在上面
+  const sfxFile = require('./sfx').renderSfx(sfx, dur, path.join(OUT, 'sfx.wav'));
+  if (sfxFile || duck.length) {
+    const fc = audioFx[audioFx.indexOf('-filter_complex') + 1] || '[1:a]anull[a]';
+    const vol = duck.length ? `,volume='${duck.map(([a, b, v]) => `if(between(t,${a.toFixed(2)},${b.toFixed(2)}),${v},`).join('')}1${')'.repeat(duck.length)}':eval=frame` : '';
+    let graph = fc.replace(/\[a\]$/, `${vol}[m]`);
+    if (sfxFile) { audioIn.push('-i', sfxFile); graph += `;[2:a]aformat=channel_layouts=stereo,volume=0.9[s];[m][s]amix=inputs=2:normalize=0:duration=first[a]`; }
+    else graph += ';[m]anull[a]';
+    audioFx = ['-filter_complex', graph, '-map', '[a]'];
+  }
   await run('ffmpeg', [
     '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, ...audioIn, '-map', '0:v', ...audioFx,
     '-t', String(dur), '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k',
@@ -107,6 +119,7 @@ async function renderSegment(from, to, file, onFrame) {
     '-movflags', '+faststart', path.join(OUT, 'video_静音.mp4'),
   ], { stdio: 'inherit' }).done;
   for (const [, , f] of segs) fs.unlinkSync(f);
+  if (sfxFile) fs.unlinkSync(sfxFile);
   fs.unlinkSync(list);
   console.log('done:', path.join(OUT, 'video.mp4'));
 })();

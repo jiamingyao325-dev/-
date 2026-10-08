@@ -151,6 +151,11 @@ function scene(render, plan) {
     segs.push({ r0: real, r1: real + d, s0: a, s1: b }); real += d; last = b;
   }
   window.DURATION = real;
+  // 场景时间 → 真实时间（音效、压低配乐都按场景时间写，渲染器要真实时间）
+  const toReal = st => { const sg = segs.find(g => !g.count && st >= g.s0 && st <= g.s1); return sg ? sg.r0 + (st - sg.s0) / (sg.s1 - sg.s0) * (sg.r1 - sg.r0) : st; };
+  window.SFX = (window.SFX_SCENE || []).map(([t, type, g]) => [toReal(t), type, g]);
+  window.DUCK = (window.DUCK_SCENE || []).map(([a, b, v]) => [toReal(a), toReal(b), v]);
+  segs.filter(g => g.count).forEach(g => { for (let k = 0; k < g.count; k++) window.SFX.push([g.r0 + k, 'tick', .5]); });
   window.render = rt => {
     REAL_T = rt;
     const sg = segs.find(s => rt < s.r1) || segs[segs.length - 1];

@@ -1,0 +1,167 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<script type="importmap">{ "imports": { "three": "../vibe-kit/node_modules/three/build/three.module.js" } }</script>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="../vibe-kit/ink.js"></script>
+<script>
+// 音效（场景时间）和压低配乐的段落，scene() 会换算成真实时间
+window.SFX_SCENE = [[.3, 'chime', .7], [9.6, 'bell', .8], [15.2, 'ding', .6], [23.4, 'ding', .5], [24.4, 'ding', .5], [25.4, 'ding', .5], [26.4, 'ding', .5], [34.6, 'wind', .5], [52.4, 'bell', .8]];
+window.DUCK_SCENE = [[34.4, 46.2, .35]];
+</script>
+<script type="module">
+// 《九九重阳》—— 全部画面由代码绘制：菊花酒杯、菊花、茱萸是 3D，文字和笔墨是 2D。
+import * as THREE from 'three';
+const TOP = 330;
+
+// ---------- 3D：透明背景，只留实物和投影，叠在宣纸上 ----------
+const gl = document.createElement('canvas'); gl.width = W; gl.height = H;
+const renderer = new THREE.WebGLRenderer({ canvas: gl, antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H, false); renderer.setClearColor(0, 0);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
+const sc = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(28, W / H, .1, 100);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ opacity: .28 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; sc.add(ground);
+sc.add(new THREE.HemisphereLight('#fff8ec', '#b8a888', 1.15));
+const key = new THREE.DirectionalLight('#fff1d8', 2.3); key.position.set(-4, 8, 3); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 10;
+Object.assign(key.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5 }); sc.add(key);
+const shadowed = m => { m.castShadow = true; m.receiveShadow = true; return m; };
+
+// 白瓷酒杯：车削成型，杯里是琥珀色菊花酒，漂三片花瓣
+const prof = [[0, .02], [.34, .02], [.36, 0], [.42, 0], [.44, .1], [.55, .3], [.72, .62], [.86, .86], [.9, .9], [.86, .88], [.8, .82], [.66, .58], [.5, .3], [.38, .16], [0, .14]].map(([x, y]) => new THREE.Vector2(x, y));
+const cup = shadowed(new THREE.Mesh(new THREE.LatheGeometry(prof, 128), new THREE.MeshPhysicalMaterial({ color: '#f4f1ea', roughness: .25, clearcoat: .8, clearcoatRoughness: .15, side: THREE.DoubleSide })));
+sc.add(cup);
+const wine = new THREE.Mesh(new THREE.CircleGeometry(.77, 64), new THREE.MeshPhysicalMaterial({ color: '#a8691c', roughness: .05, transmission: .2, transparent: true, opacity: .92 }));
+wine.rotation.x = -Math.PI / 2; wine.position.y = .7; sc.add(wine);
+const petalGeo = new THREE.SphereGeometry(1, 16, 8);
+const petalMat = c => new THREE.MeshStandardMaterial({ color: c, roughness: .55 });
+for (let i = 0; i < 3; i++) {
+  const p = new THREE.Mesh(petalGeo, petalMat('#efc046')); p.scale.set(.05, .012, .2);
+  p.position.set(Math.cos(i * 2.1) * .35, .715, Math.sin(i * 2.1) * .3); p.rotation.y = i * 1.3; sc.add(p);
+}
+// 菊花：一圈圈细长花瓣，里圈更立、更深
+function chrysanthemum() {
+  const g = new THREE.Group();
+  for (let r = 0; r < 6; r++) {
+    const n = 16 + r * 5, len = .18 + r * .07, tilt = .9 - r * .15;
+    const color = new THREE.Color('#d98e1c').lerp(new THREE.Color('#f5d36a'), r / 5);
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2 + r * .3, p = shadowed(new THREE.Mesh(petalGeo, petalMat(color)));
+      p.scale.set(.035, .012, len / 2);
+      const holder = new THREE.Group(); holder.rotation.y = a;
+      p.position.z = len / 2 + .04 + r * .02; p.rotation.x = -tilt; holder.add(p); g.add(holder);
+    }
+  }
+  const core = shadowed(new THREE.Mesh(new THREE.SphereGeometry(.1, 16, 12), petalMat('#b8701a'))); core.position.y = .05; g.add(core);
+  return g;
+}
+const flower = chrysanthemum(); flower.position.set(1.45, .2, .35); flower.rotation.set(-.35, .4, .15); sc.add(flower);
+const flower2 = chrysanthemum(); flower2.scale.setScalar(.7); flower2.position.set(.95, .14, 1.15); flower2.rotation.set(-.5, 1.2, -.1); sc.add(flower2);
+// 茱萸：一根细枝，几簇红果，两三片叶
+const zhuyu = new THREE.Group();
+const twig = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(.018, .025, 2.2, 8), new THREE.MeshStandardMaterial({ color: '#6b4a2e', roughness: .8 })));
+twig.rotation.z = Math.PI / 2; zhuyu.add(twig);
+const berryMat = new THREE.MeshPhysicalMaterial({ color: '#c0261c', roughness: .25, clearcoat: .6 });
+let seed = 7; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+for (const cx of [-.7, -.1, .5]) for (let k = 0; k < 9; k++) {
+  const b = shadowed(new THREE.Mesh(new THREE.SphereGeometry(.065, 16, 12), berryMat));
+  b.position.set(cx + (rnd() - .5) * .3, .08 + rnd() * .12, (rnd() - .5) * .3); zhuyu.add(b);
+}
+for (const [x, a] of [[-.95, .5], [.2, -.6], [.9, .3]]) {
+  const l = shadowed(new THREE.Mesh(petalGeo, new THREE.MeshStandardMaterial({ color: '#5e7a3e', roughness: .6 })));
+  l.scale.set(.09, .012, .26); l.position.set(x, .03, .12); l.rotation.y = a; zhuyu.add(l);
+}
+zhuyu.position.set(-1.45, .08, .6); zhuyu.rotation.y = .5; sc.add(zhuyu);
+
+// 镜头：按场景时间分段走位
+function shoot(t) {
+  let pos, look;
+  if (t < 9) { const k = prog(t, 0, 9); pos = [lerp(.6, .2, k), lerp(10.4, 9.4, k), lerp(10.6, 9.6, k)]; look = [.05, -.55, .2]; }
+  else if (t < 36) { const a = .15 + (t - 22) * .02; pos = [Math.sin(a) * 9.8, 8.6, Math.cos(a) * 9.8]; look = [0, -.5, .3]; }
+  else { const k = prog(t, 50, 58); pos = [lerp(.3, 0, k), lerp(9.6, 11, k), lerp(9.2, 7.4, k)]; look = [0, -.7, .2]; }
+  cam.position.set(...pos); cam.lookAt(...look);
+  renderer.render(sc, cam);
+}
+function layer3d(t, a) { if (a <= 0) return; shoot(t); ctx.save(); ctx.globalAlpha = a; ctx.drawImage(gl, 0, 0); ctx.restore(); }
+
+// ---------- 2D ----------
+// 竖排展签：一列列字，从右往左
+function scroll(cols, x, y, a, opt = {}) {
+  if (a <= 0) return;
+  const size = opt.size || 52, gap = size * 1.5, n = Math.max(...cols.map(c => c.length));
+  const w = cols.length * gap + 70, h = n * size * 1.12 + 120;
+  ctx.save(); ctx.globalAlpha = a * .95; ctx.fillStyle = '#f6f1e6'; ctx.shadowColor = 'rgba(60,45,30,.25)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
+  ctx.fillRect(x - w / 2, y, w, h); ctx.restore();
+  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = 'rgba(184,50,42,.5)'; ctx.lineWidth = 2; ctx.strokeRect(x - w / 2 + 14, y + 14, w - 28, h - 28); ctx.restore();
+  cols.forEach((c, j) => [...c].forEach((ch, i) =>
+    text(ch, x + w / 2 - 50 - j * gap, y + 70 + i * size * 1.12, { size, weight: 700, alpha: a * prog(opt.t, opt.t0 + j * .5 + i * .04, opt.t0 + .3 + j * .5 + i * .04), color: opt.red && opt.red(j) ? RED : INK })));
+}
+
+const render = t => {
+  background(t, '九九重阳', '为什么是九');
+
+  // ① 开场：3D 菊花酒
+  layer3d(t, Math.max(win(t, -1, 9.4, .6), win(t, 22.2, 34.6, .6), prog(t, 51.6, 52.4)));
+  text('九月初九', 540, TOP, { size: 84, weight: 900, alpha: win(t, -1, 9.2), spacing: 16 });
+  caption(t, 0, 4.4, '农历九月初九，|重阳节。', 'The ninth day of the ninth month: the Double Ninth Festival.');
+  caption(t, 4.4, 9.2, '可为什么偏偏是「九」？|又为什么叫「重阳」？', 'But why nine? And why "double yang"?');
+
+  // ② 两个九相重
+  const na = win(t, 9, 15.6);
+  const m = prog(t, 9.4, 10.4);
+  text('九', lerp(300, 410, m), 640, { size: 230, weight: 900, alpha: na });
+  text('九', lerp(780, 670, m), 640, { size: 230, weight: 900, alpha: na, color: RED });
+  text('阳数之极', 540, 860, { size: 44, weight: 700, color: MUTE, alpha: na * prog(t, 10, 10.6), spacing: 12 });
+  caption(t, 9.2, 12.4, '在《易经》里，九是阳数，|阳爻就叫「九」。', 'In the Book of Changes, nine is the yang number.');
+  caption(t, 12.4, 15.6, '九月九日，两个九相重——|所以叫「重阳」。', 'Ninth month, ninth day: yang doubled.');
+
+  // ③ 曹丕的信
+  const qa = win(t, 15.4, 22.4);
+  scroll(['九为阳数', '而日月并应', '俗嘉其名', '以为宜于长久'], 540, 400, qa, { t, t0: 15.6, red: j => j === 3 });
+  text('三国 · 曹丕《九日与钟繇书》', 540, 1080, { size: 32, color: MUTE, alpha: qa * prog(t, 16.6, 17.2), spacing: 2 });
+  caption(t, 15.6, 19, '三国时，曹丕在信里写：|日和月都逢九，人们喜欢这名字，', 'Cao Pi wrote: day and month both meet nine, and people love the name,');
+  caption(t, 19, 22.4, '觉得它「宜于长久」。|九，就是久。', '"fit for things that last." Nine sounds like "long-lasting."');
+
+  // ④ 习俗：3D 场景 + 四枚印
+  [['登高', 220, 470], ['插茱萸', 860, 470], ['赏菊', 220, 1010], ['饮菊花酒', 860, 1010]].forEach(([s, x, y], i) => {
+    const a = win(t, 23.2 + i, 34.4, .4);
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a * .92; ctx.fillStyle = RED; ctx.beginPath(); ctx.roundRect(x - s.length * 26 - 18, y - 36, s.length * 52 + 36, 72, 10); ctx.fill(); ctx.restore();
+    text(s, x, y + 2, { size: 44, weight: 900, color: PAPER, alpha: a, spacing: 4 });
+  });
+  caption(t, 22.6, 28.4, '这一天要登高、插茱萸，|赏菊花、喝菊花酒。', 'Climb high, wear dogwood, admire chrysanthemums, drink chrysanthemum wine.');
+  caption(t, 28.4, 34.4, '红的是茱萸，古人说能辟邪；|黄的是菊花，又叫「延寿客」。', 'Red dogwood wards off evil; the chrysanthemum is called the guest of long life.');
+
+  // ⑤ 王维
+  const pa = win(t, 34.4, 46.4);
+  scroll(['独在异乡为异客', '每逢佳节倍思亲', '遥知兄弟登高处', '遍插茱萸少一人'], 540, 380, pa, { t, t0: 35, size: 50, red: j => j === 1 });
+  text('唐 · 王维《九月九日忆山东兄弟》 时年十七', 540, 1080, { size: 30, color: MUTE, alpha: pa * prog(t, 36, 36.6), spacing: 1 });
+  caption(t, 34.6, 38.6, '唐朝，十七岁的王维|一个人在长安过重阳。', 'In the Tang dynasty, seventeen-year-old Wang Wei spent the festival alone.');
+  caption(t, 38.6, 42.6, '他想到家乡的兄弟们登高，|每人插一枝茱萸，', 'He pictured his brothers climbing the hills, each wearing dogwood,');
+  caption(t, 42.6, 46.4, '只少了他一个。', 'with just one missing: him.');
+
+  // ⑥ 老年节
+  const la = win(t, 46.2, 52);
+  text('2012', 540, 560, { size: 120, weight: 700, alpha: la });
+  text('《老年人权益保障法》', 540, 680, { size: 40, color: MUTE, alpha: la * prog(t, 46.8, 47.4), spacing: 4 });
+  richText([['农历九月初九 · ', INK], ['老年节', RED]], 540, 800, { size: 60, weight: 900, alpha: la * prog(t, 47.4, 48), spacing: 4 });
+  caption(t, 46.4, 52, '九是「久」，后来，|九九重阳成了老人的节日。', 'Nine means "long-lasting." Today the day honors the elderly.');
+
+  // ⑦ 收尾
+  const ea = prog(t, 51.8, 52.6);
+  text('九九重阳', 505, TOP - 30, { size: 84, weight: 900, alpha: ea, spacing: 14 });
+  seal('长久', 790, TOP - 36, 64, prog(t, 52.4, 53));
+  caption(t, 52.2, 58.5, '10 月 18 日重阳，|给家里的老人打个电话吧。', 'October 18 is the Double Ninth. Give your elders a call.');
+};
+
+// 节奏：开头放慢；提问处停住倒数 3 秒
+scene(render, [
+  [0, 9, .9], ['count', 3],
+  [9, 58.5],
+]);
+</script>
+</body></html>
