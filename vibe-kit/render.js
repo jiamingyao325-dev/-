@@ -16,7 +16,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const arg = name => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : null; };
 
 async function openScene() {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--allow-file-access-from-files'] });
   const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
   await page.goto('file://' + path.join(DIR, 'scene.html'));
   await page.evaluate(() => window.ready);

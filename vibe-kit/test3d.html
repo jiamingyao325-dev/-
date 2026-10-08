@@ -1,0 +1,87 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js" } }</script>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script type="module">
+// 3D 试验：一只带开片的青瓷碗，落在宣纸上
+import * as THREE from 'three';
+const W = 1080, H = 1920, cv = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H, false);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#e9e1d2');
+const camera = new THREE.PerspectiveCamera(30, W / H, .1, 100);
+
+// 宣纸桌面：程序生成的纸纹
+function paperTex() {
+  const c = document.createElement('canvas'); c.width = c.height = 1024; const p = c.getContext('2d');
+  p.fillStyle = '#ece4d4'; p.fillRect(0, 0, 1024, 1024);
+  for (let i = 0; i < 4000; i++) { p.globalAlpha = Math.random() * .12; p.strokeStyle = '#8a7a62'; p.lineWidth = .8;
+    const x = Math.random() * 1024, y = Math.random() * 1024, a = Math.random() * 6, l = 8 + Math.random() * 30;
+    p.beginPath(); p.moveTo(x, y); p.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); p.stroke(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const pt = paperTex(); pt.wrapS = pt.wrapT = THREE.RepeatWrapping; pt.repeat.set(3, 3);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshStandardMaterial({ map: pt, roughness: .95 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+// 开片纹理：抖动网格 Voronoi（每格一个点，只查 3×3 邻格），两层裂纹：大开片 + 细碎纹
+function crackleTex() {
+  const S = 2048, c = document.createElement('canvas'); c.width = c.height = S; const p = c.getContext('2d');
+  const g = p.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S * .7);
+  g.addColorStop(0, '#b4cbc1'); g.addColorStop(1, '#9db7ad'); p.fillStyle = g; p.fillRect(0, 0, S, S);
+  const img = p.getImageData(0, 0, S, S), d = img.data;
+  function layer(cells, width, dark, seed) {
+    let s = seed; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const cs = S / cells, pts = [];
+    for (let j = 0; j < cells; j++) for (let i = 0; i < cells; i++) pts.push([(i + .15 + rnd() * .7) * cs, (j + .15 + rnd() * .7) * cs, .6 + rnd() * .8]);
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const ci = Math.floor(x / cs), cj = Math.floor(y / cs); let a = 1e9, b = 1e9, w = 1;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        const ii = ci + di, jj = cj + dj; if (ii < 0 || jj < 0 || ii >= cells || jj >= cells) continue;
+        const [px, py, pw] = pts[jj * cells + ii], dd = (px - x) ** 2 + (py - y) ** 2;
+        if (dd < a) { b = a; a = dd; w = pw; } else if (dd < b) b = dd;
+      }
+      const edge = (Math.sqrt(b) - Math.sqrt(a)) / 2, ww = width * w;
+      if (edge < ww) { const k = (1 - edge / ww) ** 1.5 * dark, i = (y * S + x) * 4; d[i] -= 70 * k; d[i + 1] -= 62 * k; d[i + 2] -= 48 * k; }
+    }
+  }
+  layer(14, 2.4, .85, 11);   // 大开片
+  layer(38, 1.1, .35, 29);   // 细碎纹
+  p.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+// 碗：车削出外壁、口沿、内壁、圈足
+const prof = [];
+const R = 1.6, Hb = .62;
+prof.push(new THREE.Vector2(0, .06), new THREE.Vector2(.62, .06), new THREE.Vector2(.66, 0), new THREE.Vector2(.74, 0), new THREE.Vector2(.76, .08));
+for (let i = 0; i <= 24; i++) { const u = i / 24; prof.push(new THREE.Vector2(.76 + (R - .76) * Math.sin(u * Math.PI / 2), .08 + (Hb - .08) * (1 - Math.cos(u * Math.PI / 2)))); }
+prof.push(new THREE.Vector2(R - .015, Hb + .02), new THREE.Vector2(R - .05, Hb + .01));
+for (let i = 24; i >= 0; i--) { const u = i / 24; prof.push(new THREE.Vector2((R - .06) * Math.sin(u * Math.PI / 2) * .98 + .001, .12 + (Hb - .1) * (1 - Math.cos(u * Math.PI / 2)))); }
+const bowlGeo = new THREE.LatheGeometry(prof, 160);
+{ const pos = bowlGeo.attributes.position, uv = bowlGeo.attributes.uv;
+  for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / (2.2 * R) + .5, pos.getZ(i) / (2.2 * R) + .5); }
+const glaze = new THREE.MeshPhysicalMaterial({ map: crackleTex(), roughness: .32, clearcoat: .6, clearcoatRoughness: .25, sheen: .2, side: THREE.DoubleSide });
+const bowl = new THREE.Mesh(bowlGeo, glaze); bowl.castShadow = true; bowl.receiveShadow = true; scene.add(bowl);
+
+// 灯光：柔和主光 + 天光
+scene.add(new THREE.HemisphereLight('#fff8ec', '#b8a888', 1.1));
+const key = new THREE.DirectionalLight('#fff4e0', 2.4); key.position.set(-4, 7, 3); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 8; key.shadow.camera.left = key.shadow.camera.bottom = -4; key.shadow.camera.right = key.shadow.camera.top = 4;
+scene.add(key);
+
+window.render = t => {
+  const ang = .4 + t * .15;
+  camera.position.set(Math.sin(ang) * 8.6, 6.4 - t * .2, Math.cos(ang) * 8.6);
+  camera.lookAt(0, -1.1, 0);
+  renderer.render(scene, camera);
+};
+window.DURATION = 4;
+window.ready = Promise.resolve(true).then(() => { window.render(0); return true; });
+</script>
+</body></html>
