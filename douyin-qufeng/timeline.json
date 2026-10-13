@@ -1,0 +1,13 @@
+{
+  "scenes": [
+    {"id": "intro",    "bpm": 120, "beats": 7},
+    {"id": "hiphop",   "bpm": 96,  "beats": 8,  "name": "说唱",     "en": "HIP-HOP",   "star": "欧文",       "line": "突破快、变向多\n运球就是 flow",           "bg": ["#1B1035", "#6B21A8"], "accent": "#FACC15"},
+    {"id": "jazz",     "bpm": 150, "beats": 12, "name": "爵士",     "en": "JAZZ",      "star": "东契奇",     "line": "节奏忽快忽慢\n慢，但你就是防不住",         "bg": ["#0B1F33", "#1E4E79"], "accent": "#F5B942"},
+    {"id": "metal",    "bpm": 180, "beats": 12, "name": "重金属",   "en": "HEAVY METAL","star": "字母哥",    "line": "不讲道理\n直接撞进去",                     "bg": ["#0A0A0A", "#7F1D1D"], "accent": "#EF4444"},
+    {"id": "rnb",      "bpm": 72,  "beats": 6,  "name": "R&B",      "en": "RHYTHM & BLUES","star": "杜兰特", "line": "中投丝滑\n拔起来就进",                     "bg": ["#2A0F2E", "#9D3C72"], "accent": "#FBCFE8"},
+    {"id": "classical","bpm": 144, "beats": 12, "name": "古典乐",   "en": "CLASSICAL", "star": "邓肯",       "line": "打板、勾手，一板一眼\n篮球教科书",           "bg": ["#F4EEDF", "#D9CBA8"], "accent": "#8B5E1A", "dark": true},
+    {"id": "folk",     "bpm": 100, "beats": 8,  "name": "民谣",     "en": "FOLK",      "star": "罗德曼",     "line": "不得分\n但篮板、补防哪儿都有他",             "bg": ["#2F3B26", "#7C8B4F"], "accent": "#F2E3B3"},
+    {"id": "square",   "bpm": 128, "beats": 10, "name": "广场舞神曲","en": "SQUARE DANCE","star": "野球场王哥","line": "全场都认识他\n土，但是有用",               "bg": ["#B91C1C", "#F97316"], "accent": "#FEF08A"},
+    {"id": "outro",    "bpm": 96,  "beats": 10}
+  ]
+}
